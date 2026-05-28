@@ -119,7 +119,21 @@ app.include_router(api_admin.router)
 
 @app.get("/healthz")
 def healthz():
-    return {"ok": True, "service": "naegiwangbank-server"}
+    import sqlite3
+    from server.services.engine import get_engine
+    try:
+        engine = get_engine()
+        db_path = getattr(engine, "db_path", None)
+        if db_path:
+            with sqlite3.connect(db_path, timeout=2.0) as conn:
+                conn.execute("SELECT 1").fetchone()
+        return {"ok": True, "service": "naegiwangbank-server", "db": "ok"}
+    except Exception as e:
+        return JSONResponse(
+            status_code=503,
+            content={"ok": False, "service": "naegiwangbank-server",
+                     "error": f"{type(e).__name__}: {e}"},
+        )
 
 
 @app.exception_handler(StarletteHTTPException)
