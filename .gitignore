@@ -58,3 +58,4 @@ temp/
 logs/
 *.log
 .agent/
+.session_secret
