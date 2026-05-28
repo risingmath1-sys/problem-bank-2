@@ -1,49 +1,74 @@
 @echo off
-setlocal
+setlocal EnableDelayedExpansion
 
 REM ============================================================
-REM  git pull + restart service (deploy update)
-REM  Run on mini PC after a git push from the dev PC
+REM  Auto-pull poller: git fetch -> if upstream ahead -> pull + restart
+REM  Safe to run as scheduled task (no pause, no stdout).
+REM  Manual run: run from cmd; see logs\autopull.log for output.
 REM ============================================================
 
 set CLONE_DIR=C:\sangsung\problem-bank-2
 set SERVICE_NAME=ProblemBank2
 set PYTHON_EXE=C:\Users\Q\AppData\Local\Programs\Python\Python311\python.exe
+set NSSM=C:\sangsung\problem-bank-2\deploy\nssm.exe
+set LOG_FILE=%CLONE_DIR%\logs\autopull.log
+set MAX_LOG_BYTES=1048576
 
-cd /d "%CLONE_DIR%"
+cd /d "%CLONE_DIR%" || exit /b 1
+
+if not exist "%CLONE_DIR%\logs" mkdir "%CLONE_DIR%\logs"
+
+REM Rotate log when over 1 MB (keep one .old backup)
+if exist "%LOG_FILE%" (
+    for %%I in ("%LOG_FILE%") do set LOG_SIZE=%%~zI
+    if !LOG_SIZE! gtr %MAX_LOG_BYTES% (
+        if exist "%LOG_FILE%.old" del "%LOG_FILE%.old"
+        ren "%LOG_FILE%" autopull.log.old
+    )
+)
+
+REM Timestamp (locale-dependent; good enough for log lines)
+set TS=%date% %time:~0,8%
+
+REM Fetch upstream silently
+git fetch --quiet 2>>"%LOG_FILE%"
 if errorlevel 1 (
-    echo [ERROR] Cannot change directory: %CLONE_DIR%
-    pause
+    echo [!TS!] [ERROR] git fetch failed >> "%LOG_FILE%"
     exit /b 1
 )
 
-echo [INFO] Current commit:
-git log -1 --oneline
+for /f %%I in ('git rev-parse HEAD') do set LOCAL_SHA=%%I
+for /f %%I in ('git rev-parse @{u}') do set REMOTE_SHA=%%I
 
-echo.
-echo [INFO] Running git pull
-git pull
+if "!LOCAL_SHA!"=="!REMOTE_SHA!" (
+    echo [!TS!] no change ^(HEAD=!LOCAL_SHA:~0,7!^) >> "%LOG_FILE%"
+    exit /b 0
+)
+
+echo. >> "%LOG_FILE%"
+echo [!TS!] === changes detected: !LOCAL_SHA:~0,7! -^> !REMOTE_SHA:~0,7! === >> "%LOG_FILE%"
+
+REM Check whether requirements.txt is among changed files
+git diff --name-only !LOCAL_SHA! !REMOTE_SHA! | findstr /b /c:"requirements.txt" >nul
+set REQ_CHANGED=!errorlevel!
+
+git pull --quiet >>"%LOG_FILE%" 2>&1
 if errorlevel 1 (
-    echo [ERROR] git pull failed
-    pause
+    echo [!TS!] [ERROR] git pull failed >> "%LOG_FILE%"
     exit /b 1
 )
 
-echo.
-echo [INFO] Updating packages (if changed)
-"%PYTHON_EXE%" -m pip install -r requirements.txt --quiet
+if !REQ_CHANGED! equ 0 (
+    echo [!TS!] requirements.txt changed - running pip install >> "%LOG_FILE%"
+    "%PYTHON_EXE%" -m pip install -r requirements.txt --quiet >>"%LOG_FILE%" 2>&1
+)
 
-echo.
-echo [INFO] Restarting service: %SERVICE_NAME%
-nssm restart %SERVICE_NAME%
+echo [!TS!] restarting service %SERVICE_NAME% >> "%LOG_FILE%"
+"%NSSM%" restart %SERVICE_NAME% >>"%LOG_FILE%" 2>&1
+
 timeout /t 3 /nobreak >nul
+echo [!TS!] post-restart status: >> "%LOG_FILE%"
+"%NSSM%" status %SERVICE_NAME% >>"%LOG_FILE%" 2>&1
 
-echo.
-echo [INFO] Service status:
-nssm status %SERVICE_NAME%
-
-echo.
-echo [OK] Update complete
-echo  URL: http://192.168.0.139:8000
-echo.
 endlocal
+exit /b 0
