@@ -1,0 +1,137 @@
+{# 채점 다이얼로그 — 로컬 ScoringDialog (main_gui.py:7266+) 동등.
+   10단(열) × 20행(단당) 그리드, 보라 테마(#7b1fa2), 큰 O/X 토글 버튼.
+   기본 O 초록(#43a047) / X 빨강(#e53935). [적용] = 채점 저장 + 오답 시험지 자동 저장. #}
+<div class="space-y-3" id="scoring-root">
+
+  {# ── 상단 보라 헤더 (로컬 main_gui.py:7307 #7b1fa2) ─────────── #}
+  <header class="flex items-center justify-between gap-2 flex-wrap rounded px-3 py-2"
+          style="background: linear-gradient(90deg, #7b1fa2 0%, #9c4dbb 100%); color: white;">
+    <div class="min-w-0">
+      <div class="text-sm font-bold truncate">
+        <span class="opacity-80">✏ 채점</span>
+        &nbsp;|&nbsp;
+        {{ test.title or '(제목 없음)' }}
+        <span class="opacity-80">({{ test.problems|length }}문항)</span>
+      </div>
+      <div class="text-[11px] text-purple-100 mt-0.5">틀린 문항을 X 로 토글한 뒤 우측 [✔ 적용] 누르세요.</div>
+    </div>
+    <div class="flex gap-1 shrink-0">
+      <button type="button" title="채점 취소 (시험지 목록으로)"
+              hx-get="/partial/library/main"
+              hx-target="#library-content"
+              hx-swap="innerHTML"
+              class="text-xs px-3 py-1.5 rounded text-white font-medium"
+              style="background: #9c4dbb;"
+              onmouseover="this.style.background='#ad5fcb'"
+              onmouseout="this.style.background='#9c4dbb'">닫기</button>
+      <button type="button" form="scoring-form" onclick="document.getElementById('scoring-form').requestSubmit();"
+              title="채점 + 오답 시험지 자동 저장"
+              class="text-xs px-3 py-1.5 rounded text-white font-bold"
+              style="background: #2e7d32;"
+              onmouseover="this.style.background='#388e3c'"
+              onmouseout="this.style.background='#2e7d32'">✔ 적용 (저장)</button>
+    </div>
+  </header>
+
+  {# ── O/X 카운트 ─────────── #}
+  <div class="flex items-center justify-end gap-2 text-xs text-slate-400 px-1">
+    <span class="text-emerald-300">O </span><span id="scoring-cnt-o">0</span>
+    <span class="mx-1 text-slate-600">/</span>
+    <span class="text-rose-300">X </span><span id="scoring-cnt-x">0</span>
+  </div>
+
+  {# ── 채점 폼 (그리드) ─────────── #}
+  <form id="scoring-form"
+        hx-post="/api/library/test/{{ test.id }}/save_wrong"
+        hx-target="#scoring-result"
+        hx-swap="innerHTML">
+
+    {# 그리드: 모바일 2열 → 데스크탑 10열 (로컬 COLS=10 동등) #}
+    <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-10 gap-1.5
+                bg-slate-900 border-2 rounded p-2 max-h-[60vh] overflow-y-auto"
+         style="border-color: #7b1fa2;">
+      {% for p in test.problems %}
+        {% set initial = existing.get(p.id|string, existing.get(p.id, 1)) %}
+        {% set is_o = (initial != 0) %}
+        <div class="ox-cell flex items-center gap-1 px-1 py-1 rounded hover:bg-slate-800/60"
+             title="{{ p.large_unit or '' }}{% if p.middle_unit %} > {{ p.middle_unit }}{% endif %} | {{ p.problem_type or '' }} | {{ p.difficulty or '' }}">
+          <span class="w-6 text-right text-[11px] text-slate-400 shrink-0">{{ loop.index }}.</span>
+          <button type="button"
+                  class="ox-btn font-bold rounded shrink-0 transition"
+                  data-pid="{{ p.id }}"
+                  data-state="{{ 'O' if is_o else 'X' }}"
+                  onclick="scoringToggle(this)"
+                  style="width: 36px; height: 30px; font-size: 14px;
+                         {% if is_o %}background:#43a047;color:white;{% else %}background:#e53935;color:white;{% endif %}">
+            {{ 'O' if is_o else 'X' }}
+          </button>
+          <input type="hidden" name="score_{{ p.id }}" value="{{ '1' if is_o else '0' }}">
+        </div>
+      {% endfor %}
+    </div>
+
+    {# ── 하단 정보 + 적용 버튼 (반복) ─────────── #}
+    <div class="flex items-center justify-between gap-2 flex-wrap mt-3">
+      <div class="text-xs text-slate-400">
+        💡 [적용] 누르면 <b class="text-rose-300">X 문항</b>만 모아
+        <b style="color:#9c4dbb">"{{ test.title }}의 오답"</b> 시험지가 자동 저장됩니다.
+      </div>
+      <button type="submit" class="rounded px-4 py-1.5 text-sm font-bold text-white"
+              style="background: #2e7d32;"
+              onmouseover="this.style.background='#388e3c'"
+              onmouseout="this.style.background='#2e7d32'">✔ 적용 (저장)</button>
+    </div>
+  </form>
+
+  <div id="scoring-result"></div>
+</div>
+
+<script>
+(function () {
+  // 셀 단위 O/X 토글 (로컬 main_gui.py:7382 var.set + btn.config 동등)
+  window.scoringToggle = function (btn) {
+    const cur = btn.dataset.state || 'O';
+    const next = (cur === 'O') ? 'X' : 'O';
+    btn.dataset.state = next;
+    btn.textContent = next;
+    if (next === 'O') {
+      btn.style.background = '#43a047';
+    } else {
+      btn.style.background = '#e53935';
+    }
+    btn.style.color = 'white';
+    // 같은 셀의 hidden input 갱신
+    const cell = btn.parentElement;
+    const inp = cell.querySelector('input[type=hidden]');
+    if (inp) inp.value = (next === 'O') ? '1' : '0';
+    scoringUpdateCount();
+  };
+
+  // 일괄: 'O' | 'X' | 'flip'
+  window.scoringBulk = function (mode) {
+    document.querySelectorAll('#scoring-form .ox-btn').forEach(btn => {
+      const cur = btn.dataset.state || 'O';
+      let target;
+      if (mode === 'flip') target = (cur === 'O') ? 'X' : 'O';
+      else target = mode;
+      if (target !== cur) scoringToggle(btn);
+    });
+  };
+
+  // O/X 카운터 갱신
+  window.scoringUpdateCount = function () {
+    let o = 0, x = 0;
+    document.querySelectorAll('#scoring-form .ox-btn').forEach(btn => {
+      if ((btn.dataset.state || 'O') === 'O') o++;
+      else x++;
+    });
+    const eo = document.getElementById('scoring-cnt-o');
+    const ex = document.getElementById('scoring-cnt-x');
+    if (eo) eo.textContent = o;
+    if (ex) ex.textContent = x;
+  };
+
+  // 초기 카운터
+  scoringUpdateCount();
+})();
+</script>

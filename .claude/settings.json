@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "defaultMode": "bypassPermissions",
+    "allow": [
+      "PowerShell(Get-ChildItem*)",
+      "PowerShell(Get-Content*)",
+      "PowerShell(Get-Item*)",
+      "PowerShell(Test-Path*)",
+      "PowerShell(Select-String*)",
+      "PowerShell(Where-Object*)",
+      "PowerShell(Select-Object*)",
+      "PowerShell(Format-Table*)",
+      "PowerShell(Format-List*)",
+      "PowerShell(Measure-Object*)",
+      "PowerShell(Sort-Object*)",
+      "PowerShell(ConvertFrom-Json*)",
+      "PowerShell(ConvertTo-Json*)",
+      "PowerShell(Get-Date*)",
+      "PowerShell(Write-Output*)",
+      "mcp__ccd_session__mark_chapter"
+    ]
+  }
+}

@@ -1,0 +1,84 @@
+{# 인덱싱 진행률 partial — 폴링용 (state in [queued, running] 이면 hx-trigger every 1s).
+   완료/실패 시 폴링 중단 + 결과 표시. #}
+<div id="register-progress-inner"
+     {% if job.state in ('queued', 'running') %}
+     hx-get="/api/register/{{ job.id }}/progress"
+     hx-trigger="every 1500ms"
+     hx-target="#register-progress-inner"
+     hx-swap="outerHTML"
+     {% endif %}
+     class="space-y-3">
+
+  <!-- 헤더 + 상태 배지 -->
+  <div class="flex items-center justify-between gap-2 flex-wrap">
+    <div class="text-sm font-bold">
+      📚 인덱싱 작업
+      <span class="font-mono text-xs text-slate-400">{{ job.id }}</span>
+    </div>
+    {% if job.state == 'queued' %}
+    <span class="text-xs px-2 py-0.5 rounded bg-slate-700 text-slate-300">대기중</span>
+    {% elif job.state == 'running' %}
+    <span class="text-xs px-2 py-0.5 rounded bg-blue-700 text-blue-100 animate-pulse">실행중</span>
+    {% elif job.state == 'done' %}
+    <span class="text-xs px-2 py-0.5 rounded bg-emerald-700 text-emerald-100">✓ 완료</span>
+    {% elif job.state == 'failed' %}
+    <span class="text-xs px-2 py-0.5 rounded bg-rose-700 text-rose-100">✗ 실패</span>
+    {% endif %}
+  </div>
+
+  <!-- 진행률 바 -->
+  <div class="space-y-1">
+    <div class="flex items-baseline justify-between gap-2 text-xs text-slate-400">
+      <span class="truncate flex-1">{{ job.progress_msg or '대기 중...' }}</span>
+      <span class="text-slate-300 font-mono">{{ job.progress_pct or 0 }}%</span>
+    </div>
+    <div class="h-2 bg-slate-900 rounded overflow-hidden">
+      <div class="h-full {% if job.state == 'failed' %}bg-rose-500{% elif job.state == 'done' %}bg-emerald-500{% else %}bg-blue-500{% endif %} transition-all"
+           style="width: {{ job.progress_pct or 0 }}%"></div>
+    </div>
+  </div>
+
+  <!-- 통계 (완료 시) -->
+  {% if job.state == 'done' and job.indexing_stats %}
+  <div class="grid grid-cols-3 gap-2 text-center text-xs">
+    <div class="bg-slate-900/60 rounded px-2 py-2">
+      <div class="text-slate-400">처리 파일</div>
+      <div class="text-lg font-bold text-blue-300">{{ job.indexing_stats.get('files', 0) }}</div>
+    </div>
+    <div class="bg-slate-900/60 rounded px-2 py-2">
+      <div class="text-slate-400">신규 문제</div>
+      <div class="text-lg font-bold text-emerald-300">{{ job.indexing_stats.get('problems', 0) }}</div>
+    </div>
+    <div class="bg-slate-900/60 rounded px-2 py-2">
+      <div class="text-slate-400">소스 총 DB</div>
+      <div class="text-lg font-bold text-violet-300">{{ job.indexing_stats.get('db_total', 0) }}</div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- 에러 -->
+  {% if job.state == 'failed' and job.error %}
+  <div class="bg-rose-900/30 border border-rose-700 text-rose-200 rounded-xl p-3 text-xs whitespace-pre-wrap break-words">
+    {{ job.error }}
+  </div>
+  {% endif %}
+
+  <!-- 실시간 로그 (최근 50줄) -->
+  {% if job.indexing_log %}
+  <details {% if job.state in ('queued', 'running') %}open{% endif %} class="bg-slate-900/60 rounded">
+    <summary class="cursor-pointer px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-900">
+      📜 실시간 로그 ({{ job.indexing_log|length }}줄)
+    </summary>
+    <pre class="px-3 py-2 text-[11px] font-mono text-slate-400 max-h-64 overflow-y-auto leading-relaxed">{% for line in job.indexing_log[-50:] %}{{ line }}
+{% endfor %}</pre>
+  </details>
+  {% endif %}
+
+  <!-- 완료 후 안내 -->
+  {% if job.state == 'done' %}
+  <div class="bg-emerald-900/30 border border-emerald-700 text-emerald-200 rounded-xl p-3 text-xs">
+    ✓ 인덱싱 완료. <a href="/manage" class="underline">문제 관리 탭</a>에서 결과를 확인하세요.
+    <a href="/" class="underline ml-2">홈</a>으로 돌아갈 수 있습니다.
+  </div>
+  {% endif %}
+</div>

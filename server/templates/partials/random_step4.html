@@ -1,0 +1,144 @@
+{#
+  랜덤출제 Step 4 — 시험지 저장 및 출제. 로컬 main_gui.py:4185-4400 동등.
+  헤더: 닫기/이전/테스트저장/테스트출제/마침
+  좌측: 내 시험지 보관함 (폴더+시험지 트리)
+  우측: 현재 작업 중 시험지 미리보기 (제목/요약/문항 리스트)
+#}
+{# 폴더 트리를 select <option> 리스트로 평탄화. depth 만큼 들여쓰기. #}
+{% macro folder_opts(nodes, depth) -%}
+{% for n in nodes %}
+<option value="{{ n.id }}">{{ '— ' * depth }}📁 {{ n.name }}</option>
+{{ folder_opts(n.children, depth + 1) }}
+{% endfor %}
+{%- endmacro %}
+<div id="random-root" class="space-y-4">
+  <!-- 헤더 -->
+  <header class="flex items-center justify-between gap-3 flex-wrap">
+    <h1 class="text-2xl font-bold">💾 시험지 저장 및 출제</h1>
+    <div class="flex gap-2 flex-wrap">
+      <!-- [테스트저장] = 저장 다이얼로그 토글 -->
+      <button type="button"
+              onclick="document.getElementById('save-dialog').classList.toggle('hidden')"
+              class="bg-slate-100 text-blue-700 hover:bg-white rounded px-4 py-1.5 text-sm font-bold">💾 테스트저장</button>
+
+      <!-- [테스트출제] = 출제 큐 등록 -->
+      <button type="button"
+              hx-post="/api/exam/random_finalize"
+              hx-target="#random-root"
+              hx-swap="outerHTML"
+              class="bg-blue-600 hover:bg-blue-500 rounded px-4 py-1.5 text-sm font-bold">▶ 테스트출제</button>
+
+      <button type="button"
+              hx-post="/partial/random/step4_back_to_step3"
+              hx-target="#random-root"
+              hx-swap="outerHTML"
+              class="bg-slate-700 hover:bg-slate-600 rounded px-3 py-1.5 text-sm">이전</button>
+      <a href="/" class="bg-slate-700 hover:bg-slate-600 rounded px-3 py-1.5 text-sm">마침</a>
+    </div>
+  </header>
+
+  <!-- 저장 다이얼로그 (인라인 토글) -->
+  <div id="save-dialog" class="hidden bg-slate-800 border border-slate-700 rounded-xl p-4 space-y-3">
+    <div class="flex items-center justify-between">
+      <div class="text-sm font-bold">📝 테스트 저장</div>
+      <button type="button"
+              onclick="document.getElementById('save-dialog').classList.add('hidden')"
+              class="text-xs text-slate-400 hover:text-slate-200">✕ 닫기</button>
+    </div>
+    <form hx-post="/api/library/save_random_draft"
+          hx-target="#save-result"
+          hx-swap="innerHTML"
+          class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">시험지 제목</label>
+        <input type="text" name="title" required
+               value="{{ saved_exam_title }}"
+               placeholder="예: 5월 모의 시험지"
+               class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 focus:border-blue-500 outline-none">
+      </div>
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">단원 요약 (선택)</label>
+        <input type="text" name="unit_summary"
+               value="{{ unit_summary_auto if unit_summary_auto != '(자동요약)' else '' }}"
+               placeholder="예: 다항식 외 3개"
+               class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 focus:border-blue-500 outline-none">
+      </div>
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">저장 폴더</label>
+        <select name="folder_id"
+                class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1">
+          <option value="root">📂 루트 (최상위)</option>
+          {{ folder_opts(folder_tree, 0) }}
+        </select>
+      </div>
+      <div class="md:col-span-3 flex items-center justify-end gap-2">
+        <div id="save-result" class="flex-1"></div>
+        <button type="submit" class="bg-blue-600 hover:bg-blue-500 rounded px-4 py-1.5 text-sm font-bold">저장</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- 본문: 좌(보관함) + 우(미리보기) -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <!-- 좌측: 시험지 보관함 -->
+    <aside class="bg-slate-800 border border-slate-700 rounded-xl p-3 min-h-[400px]">
+      <div class="flex items-center justify-between mb-2">
+        <div class="text-sm font-bold">📚 내 시험지 보관함</div>
+        <form hx-post="/api/library/folder"
+              hx-target="#step4-explorer"
+              hx-swap="innerHTML"
+              class="flex gap-1 items-center"
+              onsubmit="setTimeout(()=>this.reset(),100)">
+          <select name="parent_id"
+                  class="bg-slate-900 border border-slate-700 rounded px-1 py-0.5 text-xs max-w-[120px]"
+                  title="부모 폴더 (안 고르면 루트)">
+            <option value="root">📂 루트</option>
+            {{ folder_opts(folder_tree, 0) }}
+          </select>
+          <input type="text" name="name" placeholder="새 폴더명"
+                 class="w-24 bg-slate-900 border border-slate-700 rounded px-1 py-0.5 text-xs">
+          <button type="submit" class="bg-slate-700 hover:bg-slate-600 rounded px-2 py-0.5 text-xs">+</button>
+        </form>
+      </div>
+      <div id="step4-explorer">
+        {% include "partials/random_step4_explorer.html" %}
+      </div>
+    </aside>
+
+    <!-- 우측: 미리보기 -->
+    <main class="lg:col-span-2 bg-slate-800 border border-slate-700 rounded-xl p-4 space-y-3">
+      <!-- Info Header -->
+      <div class="border-b border-slate-700 pb-2">
+        <div class="text-base font-bold">{{ saved_exam_title or '현재 작업 중인 시험지' }}</div>
+        <div class="text-xs text-slate-400 mt-1">
+          총 <b class="text-blue-400">{{ rows|length }}</b>문항 ·
+          단원: {{ unit_summary_auto }}
+        </div>
+      </div>
+
+      <!-- Problem List -->
+      <div class="overflow-x-auto max-h-[440px] overflow-y-auto border border-slate-700 rounded">
+        <table class="min-w-full text-xs">
+          <thead class="bg-slate-900 sticky top-0 text-slate-400">
+            <tr>
+              <th class="px-2 py-1 w-10 text-center">No</th>
+              <th class="px-2 py-1 text-left">문항 정보</th>
+              <th class="px-2 py-1 w-32 text-center">단원</th>
+              <th class="px-2 py-1 w-16 text-center">형식</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in rows %}
+            <tr class="border-t border-slate-800 hover:bg-slate-700/40">
+              <td class="px-2 py-1 text-center text-slate-400">{{ r.no }}</td>
+              <td class="px-2 py-1">{{ r.source_str }}</td>
+              <td class="px-2 py-1 text-center">{{ r.unit_name }}</td>
+              <td class="px-2 py-1 text-center">{{ r.ptype }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+</div>

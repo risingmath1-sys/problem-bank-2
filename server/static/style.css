@@ -1,0 +1,4 @@
+/* 커스텀 스타일 (Tailwind CDN 외) */
+.htmx-indicator { display: none; }
+.htmx-request .htmx-indicator { display: inline; }
+.htmx-request.htmx-indicator { display: inline; }

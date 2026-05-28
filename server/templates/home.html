@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}홈 — 상승 Solution{% endblock %}
+{% block content %}
+<div class="space-y-6">
+  <!-- 헤더: 로고 + 타이틀 + 부제 (로컬 main_gui.py:184-213 동등) -->
+  <header class="flex items-start gap-4">
+    <img src="/static/logo.png" alt="상승" class="h-14 w-14 rounded">
+    <div>
+      <h1 class="text-3xl font-bold text-white">상승 Solution</h1>
+      <p class="text-slate-400 text-sm mt-1">Problem Bank Management System</p>
+      <p class="text-slate-500 text-xs mt-1">
+        {{ user.display_name or user.display_id }} 님 ·
+        <span class="{{ 'text-amber-400' if user.role == 'admin' else 'text-slate-400' }}">
+          {{ '관리자' if user.role == 'admin' else '사용자' }}
+        </span>
+      </p>
+    </div>
+  </header>
+
+  <hr class="border-slate-700">
+
+  <!-- M E N U (5개 카드, 로컬 main_gui.py:225-240 동등) -->
+  <section>
+    <div class="text-xs font-bold text-slate-500 mb-2 tracking-widest">M E N U</div>
+    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3">
+      <a href="/random"
+         class="block rounded-xl p-5 transition hover:scale-105"
+         style="background-color: #3a86ff;">
+        <div class="font-bold text-white text-base">랜덤 출제</div>
+        <div class="text-xs mt-2 text-white/80">단원 선택 후<br>랜덤 출제</div>
+      </a>
+
+      <a href="/original"
+         class="block rounded-xl p-5 transition hover:scale-105"
+         style="background-color: #06c98a;">
+        <div class="font-bold text-white text-base">원본 출제</div>
+        <div class="text-xs mt-2 text-white/80">원본 그대로<br>출제·내보내기</div>
+      </a>
+
+      <a href="/library"
+         class="block rounded-xl p-5 transition hover:scale-105"
+         style="background-color: #7c3aed;">
+        <div class="font-bold text-white text-base">시험지 관리</div>
+        <div class="text-xs mt-2 text-white/80">생성된 시험지<br>열람·관리</div>
+      </a>
+
+      {% if user.role == 'admin' %}
+      <a href="/register"
+         class="block rounded-xl p-5 transition hover:scale-105"
+         style="background-color: #f4700c;">
+        <div class="font-bold text-white text-base">문제 등록</div>
+        <div class="text-xs mt-2 text-white/80">HWP 스캔 및<br>DB 등록</div>
+      </a>
+
+      <a href="/manage"
+         class="block rounded-xl p-5 transition hover:scale-105"
+         style="background-color: #4a5568;">
+        <div class="font-bold text-white text-base">문제 관리</div>
+        <div class="text-xs mt-2 text-white/80">등록 문제<br>검색·제외 설정</div>
+      </a>
+
+      <a href="/users"
+         class="block rounded-xl p-5 transition hover:scale-105"
+         style="background-color: #d97706;">
+        <div class="font-bold text-white text-base">사용자 관리</div>
+        <div class="text-xs mt-2 text-white/80">계정 발급·권한<br>비활성화·삭제</div>
+      </a>
+      {% endif %}
+    </div>
+  </section>
+
+  <hr class="border-slate-700">
+
+  <!-- 문제 현황 통계 (로컬 main_gui.py:245-282 동등) -->
+  <section>
+    <div class="text-xs font-bold text-slate-500 mb-2 tracking-widest">문 제 현 황</div>
+    <div hx-get="/partial/stats" hx-trigger="load" hx-swap="innerHTML">
+      <div class="bg-slate-800/50 border border-slate-700 rounded-xl p-5 text-slate-500 text-sm">
+        통계 불러오는 중...
+      </div>
+    </div>
+  </section>
+
+  {% if user.role == 'admin' %}
+  <hr class="border-slate-700">
+
+  <!-- 원본 파일 폴더 설정 (admin only, 로컬 main_gui.py:287-302 동등) -->
+  <section>
+    <div class="text-xs font-bold text-slate-500 mb-2 tracking-widest">원 본 파 일 폴 더</div>
+    <div hx-get="/partial/source_folder" hx-trigger="load" hx-swap="innerHTML">
+      <div class="bg-slate-800/50 border border-slate-700 rounded-xl p-3 text-slate-500 text-sm">
+        폴더 정보 불러오는 중...
+      </div>
+    </div>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}시험지 관리 — 상승 Solution{% endblock %}
+{% block content %}
+<div class="space-y-4">
+  <h1 class="text-2xl font-bold">📚 시험지 관리</h1>
+
+  {# library-content: 메인 그리드 ↔ 문항 보기 전체 화면 swap 컨테이너 #}
+  <div id="library-content">
+    {% include 'partials/library_main.html' %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,179 @@
+{#
+  랜덤출제 Step 3 — 출제 문항 확인 화면.
+  로컬 main_gui.py:3680-3760 (_build_step_3_ui) 와 동등.
+  헤더: 닫기/이전/랜덤추가/순서정렬/다음
+  본문: 순번/출처/단원/수준/형식/[삭제]
+#}
+<div id="random-root" class="space-y-4" data-batch-count="{{ rows|length }}">
+  <!-- 헤더 -->
+  <header class="flex items-center justify-between gap-3 flex-wrap">
+    <h1 class="text-2xl font-bold">📋 출제 문항 확인 (총 {{ rows|length }}문항)</h1>
+    <div class="flex gap-2 flex-wrap">
+      <!-- 다음 → Step 4 (시험지 저장 및 출제) — 로컬 _go_to_step_4 동등 -->
+      <button type="button"
+              hx-get="/partial/random/step4"
+              hx-target="#random-root"
+              hx-swap="outerHTML"
+              class="bg-emerald-600 hover:bg-emerald-500 rounded px-4 py-1.5 text-sm font-bold">다음</button>
+      <button type="button"
+              onclick="document.getElementById('sort-dialog').classList.toggle('hidden')"
+              class="bg-slate-700 hover:bg-slate-600 rounded px-3 py-1.5 text-sm">순서정렬</button>
+      <button type="button"
+              hx-get="/partial/random/step3_to_step2"
+              hx-target="#random-root"
+              hx-swap="outerHTML"
+              class="bg-blue-700 hover:bg-blue-600 rounded px-3 py-1.5 text-sm">랜덤추가</button>
+      <button type="button"
+              hx-post="/partial/random/step3_pop_last"
+              hx-target="#random-root"
+              hx-swap="outerHTML"
+              hx-confirm="직전에 추가한 문항들을 취소하고 다시 출제하시겠습니까?"
+              class="bg-slate-700 hover:bg-slate-600 rounded px-3 py-1.5 text-sm">다시출제</button>
+      <a href="/" class="bg-slate-700 hover:bg-slate-600 rounded px-3 py-1.5 text-sm">닫기</a>
+    </div>
+  </header>
+
+  {% if skipped_count > 0 %}
+  <div class="bg-amber-900/30 border border-amber-700 text-amber-200 rounded-xl p-3 text-sm">
+    원본 HWP 파일을 찾지 못해 사전 제외된 문제 <b>{{ skipped_count }}건</b>이 있습니다.
+  </div>
+  {% endif %}
+
+  <!-- 정렬 다이얼로그 (인라인 토글) -->
+  <div id="sort-dialog" class="hidden bg-slate-800 border border-slate-700 rounded-xl p-4 space-y-2">
+    <div class="flex items-center justify-between">
+      <div class="text-sm font-semibold">문항 순서 정렬</div>
+      <button type="button"
+              onclick="document.getElementById('sort-dialog').classList.add('hidden')"
+              class="text-xs text-slate-400 hover:text-slate-200">✕ 닫기</button>
+    </div>
+    <form id="sort-form"
+          hx-post="/partial/random/step3_sort"
+          hx-target="#random-root"
+          hx-swap="outerHTML"
+          class="space-y-2">
+      {% set sort_opts = draft.last_sort_options or {} %}
+      {% for i in [1, 2, 3] %}
+      {% set sel = sort_opts.get('sort_p' ~ i) or '(없음)' %}
+      {% set rev = sort_opts.get('sort_p' ~ i ~ '_rev') == '1' %}
+      <div class="flex items-center gap-2 text-sm">
+        <span class="w-12 text-slate-400">우선 {{ i }}</span>
+        <select name="sort_p{{ i }}" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm">
+          {% for v in ['(없음)', '단원순', '수준순', '형식순', '무작위'] %}
+          <option value="{{ v }}" {% if sel == v %}selected{% endif %}>{{ v }}</option>
+          {% endfor %}
+        </select>
+        <label class="flex items-center gap-1 text-xs">
+          <input type="checkbox" name="sort_p{{ i }}_rev" value="1" {% if rev %}checked{% endif %}> 역순
+        </label>
+      </div>
+      {% endfor %}
+      <div class="flex items-center justify-between pt-1 border-t border-slate-700 mt-2">
+        <label class="flex items-center gap-1.5 text-xs text-slate-300 select-none cursor-pointer">
+          <input type="checkbox" id="sort-auto-apply" class="cursor-pointer">
+          <span>다음부터 자동 적용 <span class="text-slate-500">(랜덤추가 시에도)</span></span>
+        </label>
+        <button type="submit" class="bg-blue-600 hover:bg-blue-500 rounded px-4 py-1.5 text-sm">적용</button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+  // 정렬 옵션 영속화 (localStorage) + 자동 적용 (HTMX 환경)
+  // - localStorage: 옵션 + 자동적용 플래그 영구 저장 (브라우저 단위)
+  // - sessionStorage: 현재 step3 진입 시점의 batch_count 마커 → 무한 루프 방지
+  (function () {
+    const LS_OPTS = "exam_sort_v2";
+    const LS_AUTO = "exam_sort_auto_v2";
+    const SS_DONE = "step3_autosort_batch";
+
+    const root = document.getElementById("random-root");
+    const form = document.getElementById("sort-form");
+    const autoCb = document.getElementById("sort-auto-apply");
+    if (!root || !form || !autoCb) return;
+
+    const batchCount = root.dataset.batchCount || "0";
+
+    // 1) localStorage → form 채움 (서버 렌더 값보다 우선)
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem(LS_OPTS) || "{}"); } catch (e) {}
+    for (const k of Object.keys(saved)) {
+      const el = form.elements[k];
+      if (!el) continue;
+      if (el.type === "checkbox") el.checked = saved[k] === "1";
+      else el.value = saved[k];
+    }
+    autoCb.checked = localStorage.getItem(LS_AUTO) === "1";
+
+    // 2) form change/submit 시 localStorage 갱신
+    function persist() {
+      const data = {};
+      for (const el of form.elements) {
+        if (!el.name) continue;
+        if (el.type === "checkbox") data[el.name] = el.checked ? "1" : "";
+        else data[el.name] = el.value;
+      }
+      localStorage.setItem(LS_OPTS, JSON.stringify(data));
+      localStorage.setItem(LS_AUTO, autoCb.checked ? "1" : "0");
+    }
+    form.addEventListener("change", persist);
+    form.addEventListener("submit", persist);
+    autoCb.addEventListener("change", () => {
+      localStorage.setItem(LS_AUTO, autoCb.checked ? "1" : "0");
+    });
+
+    // 3) 자동 적용 — auto=ON, 의미있는 옵션, 이번 batch 에 대해 아직 미적용일 때만
+    const lastDoneFor = sessionStorage.getItem(SS_DONE);
+    const hasReal = [1, 2, 3].some(i =>
+      (saved["sort_p" + i] || "(없음)") !== "(없음)"
+    );
+    if (autoCb.checked && hasReal && lastDoneFor !== batchCount) {
+      sessionStorage.setItem(SS_DONE, batchCount);
+      // htmx 가 submit 이벤트를 hook 함 → form.requestSubmit() 으로 정상 전송
+      // microtask 으로 미루어 현재 swap 완료 후 실행
+      setTimeout(() => { try { form.requestSubmit(); } catch (e) { form.submit(); } }, 0);
+    }
+  })();
+  </script>
+
+  <!-- 문제 목록 테이블 -->
+  {% if rows %}
+  <div class="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-900/50 text-slate-300">
+        <tr>
+          <th class="px-2 py-2 w-12 text-center">순번</th>
+          <th class="px-2 py-2 text-left">출처</th>
+          <th class="px-2 py-2 w-40 text-center">단원</th>
+          <th class="px-2 py-2 w-16 text-center">수준</th>
+          <th class="px-2 py-2 w-24 text-center">형식</th>
+          <th class="px-2 py-2 w-16 text-center">관리</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr class="border-t border-slate-700 hover:bg-slate-700/30">
+          <td class="px-2 py-1.5 text-center text-slate-400">{{ r.no }}</td>
+          <td class="px-2 py-1.5">{{ r.source_str }}</td>
+          <td class="px-2 py-1.5 text-center">{{ r.unit_name }}</td>
+          <td class="px-2 py-1.5 text-center">{{ r.level }}</td>
+          <td class="px-2 py-1.5 text-center">{{ r.ptype }}</td>
+          <td class="px-2 py-1.5 text-center">
+            <button type="button"
+                    hx-post="/partial/random/step3_remove"
+                    hx-vals='{"problem_id": "{{ r.id }}"}'
+                    hx-target="#random-root"
+                    hx-swap="outerHTML"
+                    class="text-rose-400 hover:text-rose-300 text-xs">[삭제]</button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 text-center text-slate-400">
+    출제할 문항이 없습니다. <a href="/" class="text-blue-400 underline">홈으로</a>
+  </div>
+  {% endif %}
+</div>

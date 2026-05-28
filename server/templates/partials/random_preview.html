@@ -1,0 +1,8 @@
+{% if not has_filter %}
+  <div class="text-slate-500 text-sm">필터를 선택하면 매칭 수가 표시됩니다.</div>
+{% elif count == 0 %}
+  <div class="text-amber-400">⚠ 매칭되는 문제가 없습니다.</div>
+{% else %}
+  <div class="text-sm text-slate-400">매칭 후보</div>
+  <div class="text-3xl font-bold text-blue-400">{{ "{:,}".format(count) }}<span class="text-base text-slate-400 ml-1">문제</span></div>
+{% endif %}

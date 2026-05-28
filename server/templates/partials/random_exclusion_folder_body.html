@@ -1,0 +1,41 @@
+{# 폴더 body lazy partial — 그 폴더의 시험지 체크박스 + 자식 폴더 헤더(또 lazy).
+   사용자가 폴더 헤더 클릭 시 처음 1회 fetch되어 채워짐. 그 후엔 JS로 펼침/접힘만. #}
+<div class="px-3 pb-2 space-y-1">
+  {% if not tests and not children %}
+    <div class="text-xs text-slate-500 px-2 py-2">시험지 없음</div>
+  {% endif %}
+
+  {% for t in tests %}
+  <label class="flex items-center justify-between gap-2 text-xs px-2 py-1 rounded hover:bg-slate-700/40 cursor-pointer
+                {% if t.id in selected_tids %}bg-rose-900/30{% endif %}">
+    <span class="flex items-center gap-2 min-w-0">
+      <input type="checkbox" name="excl_tid" value="{{ t.id }}"
+             data-tid="{{ t.id }}"
+             {% if t.id in selected_tids %}checked{% endif %}
+             class="accent-rose-500 excl-tid-visible">
+      <span class="font-semibold truncate">{{ t.title or '(제목 없음)' }}</span>
+      {% if t.created_at %}<span class="text-slate-500">{{ t.created_at[:10] }}</span>{% endif %}
+    </span>
+    <span class="text-slate-400 whitespace-nowrap">{{ test_pid_count.get(t.id, 0) }}문항</span>
+  </label>
+  {% endfor %}
+
+  {# 자식 폴더 — selected_tids 가 있으면 자동 fetch (헤더는 닫힘), 없으면 클릭 시 lazy fetch #}
+  {% set auto = selected_tids|length > 0 %}
+  {% for c in children %}
+  <details class="bg-slate-800/40 border border-slate-700 rounded ml-3 mt-1"
+           data-folder-id="{{ c.id }}">
+    <summary class="cursor-pointer px-3 py-2 text-xs font-bold flex items-center gap-2"
+             hx-get="/partial/random/exclusion_folder/{{ c.id }}"
+             hx-trigger="{% if auto %}load, {% endif %}click once"
+             hx-target="next .folder-body"
+             hx-swap="innerHTML">
+      <input type="checkbox" class="folder-master accent-rose-500"
+             title="이 폴더(하위 포함) 시험지 전체 선택/해제"
+             onclick="event.stopPropagation(); applyFolderState(this.closest('details'), this.checked);">
+      {% if c.is_protected %}🔒{% else %}📁{% endif %} {{ c.name }}
+    </summary>
+    <div class="folder-body"></div>
+  </details>
+  {% endfor %}
+</div>

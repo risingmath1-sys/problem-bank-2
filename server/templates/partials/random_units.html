@@ -1,0 +1,19 @@
+{% if not large_units %}
+  <div class="text-sm text-slate-500 italic">단원 정보가 없습니다.</div>
+{% else %}
+<div class="space-y-3">
+  {% for lu in large_units %}
+  <div>
+    <div class="text-sm font-semibold text-blue-300 mb-1">{{ lu.code }}. {{ lu.name }}</div>
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-1 text-sm pl-3">
+      {% for mu in lu.medium_units %}
+      <label class="flex items-center gap-2 text-slate-200 hover:text-white cursor-pointer">
+        <input type="checkbox" name="unit_codes" value="{{ mu.code }}" class="accent-blue-500">
+        <span>{{ mu.code }} {{ mu.name }}</span>
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}

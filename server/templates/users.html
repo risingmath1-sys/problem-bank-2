@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}사용자 관리 — 상승 Solution{% endblock %}
+{% block content %}
+<div class="space-y-4">
+  <header class="flex items-center justify-between">
+    <h1 class="text-2xl font-bold">👥 사용자 관리</h1>
+    <div class="flex gap-2">
+      <a href="/" class="bg-slate-700 hover:bg-slate-600 rounded px-3 py-1.5 text-sm">홈</a>
+      <button type="button"
+              hx-get="/partial/users"
+              hx-target="#users-root"
+              hx-swap="innerHTML"
+              class="bg-slate-700 hover:bg-slate-600 rounded px-3 py-1.5 text-sm">↻ 새로고침</button>
+      <button type="button"
+              onclick="document.getElementById('new-user-dialog').classList.toggle('hidden')"
+              class="bg-blue-600 hover:bg-blue-500 rounded px-4 py-1.5 text-sm font-bold">+ 새 계정 발급</button>
+    </div>
+  </header>
+
+  <!-- 새 계정 발급 다이얼로그 (인라인 토글) -->
+  <div id="new-user-dialog" class="hidden bg-slate-800 border border-slate-700 rounded-xl p-4 space-y-3">
+    <div class="flex items-center justify-between">
+      <div class="text-sm font-bold">새 계정 발급</div>
+      <button type="button"
+              onclick="document.getElementById('new-user-dialog').classList.add('hidden')"
+              class="text-xs text-slate-400 hover:text-slate-200">✕ 닫기</button>
+    </div>
+    <form hx-post="/api/users/create"
+          hx-target="#new-user-result"
+          hx-swap="innerHTML"
+          class="grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">ID (예: kim)</label>
+        <input type="text" name="display_id" required autocomplete="off"
+               class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 focus:border-blue-500 outline-none">
+      </div>
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">이름 (선택)</label>
+        <input type="text" name="display_name" autocomplete="off"
+               class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 focus:border-blue-500 outline-none">
+      </div>
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">임시 비밀번호 (6+)</label>
+        <input type="text" name="password" required autocomplete="off"
+               class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 focus:border-blue-500 outline-none">
+      </div>
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">역할</label>
+        <select name="role" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 focus:border-blue-500 outline-none">
+          <option value="user">일반 사용자</option>
+          <option value="admin">관리자</option>
+        </select>
+      </div>
+      <div class="md:col-span-4 flex justify-end gap-2">
+        <div id="new-user-result" class="flex-1 self-center"></div>
+        <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 rounded px-4 py-1.5 text-sm font-bold">발급</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- 사용자 목록 -->
+  <div id="users-root" hx-get="/partial/users" hx-trigger="load" hx-swap="innerHTML">
+    <div class="bg-slate-800/50 border border-slate-700 rounded-xl p-5 text-slate-500 text-sm">
+      사용자 목록 불러오는 중...
+    </div>
+  </div>
+</div>
+{% endblock %}

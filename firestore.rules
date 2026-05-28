@@ -1,0 +1,111 @@
+rules_version = '2';
+
+// =============================================================================
+// 문제은행2 — Firestore Security Rules
+// 설계도: 로그인시스템설계도.md §3-2, §4 (이중 잠금 모델)
+//
+// 모델 요약:
+//   - problems          : read=인증된 사용자, write=admin 만
+//   - problem_preferences: read=인증된 사용자, write=본인 것만
+//   - problem_scores    : read/write=본인, admin은 read all
+//   - saved_tests       : read/write=본인, admin은 read all
+//   - user_directories  : read/write=본인, admin은 read all
+//   - users             : read=본인+admin, write=admin 만
+//   - 그 외 경로는 default deny
+//
+// 주의:
+//   현재 (Phase 2~3) 클라이언트는 firebase_admin SDK (서비스 계정) 만 사용 →
+//   Rules 를 우회하므로 본 규칙은 "Phase 4 이후 직접 클라이언트 접근" 및
+//   "Web API Key 로 외부 우회 호출" 시점의 방어선이다 (이중 잠금의 뒷단).
+// =============================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- helpers ----------
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && userDoc().role == 'admin'
+        && userDoc().active == true;
+    }
+
+    function isActiveUser() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && userDoc().active == true;
+    }
+
+    function ownsResource() {
+      return isSignedIn() && resource.data.user_id == request.auth.uid;
+    }
+
+    function ownsIncoming() {
+      return isSignedIn() && request.resource.data.user_id == request.auth.uid;
+    }
+
+    // ---------- 1) users ----------
+    // - 로그인 직후 자기 문서를 읽어 role 을 확인해야 하므로 isSelf 허용.
+    // - admin 은 모두 읽고 쓸 수 있음.
+    match /users/{uid} {
+      allow read: if isSelf(uid) || isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ---------- 2) problems (공통 풀) ----------
+    // - 인증된 활성 사용자는 읽기 가능.
+    // - 작성/수정/삭제는 admin 전용 (인덱서 = Phase 5 가 admin 권한으로 호출).
+    match /problems/{prob_id} {
+      allow read: if isActiveUser();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ---------- 3) problem_preferences (선호도 — Good/Soso/Bad) ----------
+    // - 읽기는 인증된 사용자 누구나 (선호도 토글 "남의 것도" 보기 지원).
+    // - 쓰기는 본인 것만.
+    match /problem_preferences/{doc_id} {
+      allow read: if isActiveUser();
+      allow create: if ownsIncoming();
+      allow update, delete: if ownsResource() && ownsIncoming();
+    }
+
+    // ---------- 4) problem_scores (정답률 — 개인) ----------
+    // - 본인만 read/write, admin 은 read 전체.
+    match /problem_scores/{doc_id} {
+      allow read: if ownsResource() || isAdmin();
+      allow create: if ownsIncoming();
+      allow update, delete: if ownsResource() && ownsIncoming();
+    }
+
+    // ---------- 5) saved_tests (시험지 — 개인) ----------
+    match /saved_tests/{test_id} {
+      allow read: if ownsResource() || isAdmin();
+      allow create: if ownsIncoming();
+      allow update, delete: if ownsResource() && ownsIncoming();
+    }
+
+    // ---------- 6) user_directories (개인 폴더 구조) ----------
+    match /user_directories/{doc_id} {
+      allow read: if ownsResource() || isAdmin();
+      allow create: if ownsIncoming();
+      allow update, delete: if ownsResource() && ownsIncoming();
+    }
+
+    // ---------- default deny ----------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

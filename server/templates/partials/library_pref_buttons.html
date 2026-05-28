@@ -1,0 +1,24 @@
+{# 선호도 3색 토글 버튼 — 로컬 main_gui.py:6377 PREF_STYLE 동등 #}
+{# pid: 문제 ID (한글/대괄호 포함 가능), current: 'Good'|'Soso'|'Bad'|None #}
+{# 2026-05-23: safe_id 는 CSS selector 안전한 ID (호출측에서 loop.index 등으로 전달). #}
+{# 없으면 pid 그대로 fallback (옛 동작) — 단 pid 에 [,] 한글이 있으면 selector 가 깨짐. #}
+{# safe_id 가 없거나(None/빈문자열) defined 안 됐을 때 → pid 기반 fallback (CSS selector 깨짐 위험 있음) #}
+{% set _id = safe_id if (safe_id is defined and safe_id) else ('pref-cell-' ~ pid) %}
+{% set styles = {
+  'Good': {'on': 'bg-green-600 text-white', 'off': 'bg-green-50 text-green-700 hover:bg-green-100'},
+  'Soso': {'on': 'bg-orange-600 text-white', 'off': 'bg-orange-50 text-orange-700 hover:bg-orange-100'},
+  'Bad':  {'on': 'bg-red-600  text-white', 'off': 'bg-red-50  text-red-700  hover:bg-red-100'}
+} %}
+<div class="flex gap-1 justify-center" id="{{ _id }}">
+  {% for label in ['Good', 'Soso', 'Bad'] %}
+    {% set on = (current == label) %}
+    <button type="button"
+            hx-post="/api/library/problem/{{ pid|urlencode }}/preference"
+            hx-vals='{"preference": "{{ "" if on else label }}", "safe_id": "{{ _id }}"}'
+            hx-target="#{{ _id }}"
+            hx-swap="outerHTML"
+            class="px-2 py-0.5 rounded text-[11px] font-medium transition {{ styles[label].on if on else styles[label].off }}">
+      {{ label }}
+    </button>
+  {% endfor %}
+</div>

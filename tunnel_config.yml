@@ -1,0 +1,15 @@
+# Cloudflare Tunnel 설정 (solutio.risingmath.kr)
+# 위치: G:\문제은행\문제은행2\tunnel_config.yml
+
+# Tunnel 정보 (cloudflare tunnel create 실행 후 자동 생성되는 부분)
+tunnel: solutio
+credentials-file: G:\Users\dongw\.cloudflare\solutio-tunnel-cert.json
+
+# 라우팅 규칙
+ingress:
+  # solutio.risingmath.kr → localhost:8000
+  - hostname: solutio.risingmath.kr
+    service: http://localhost:8000
+
+  # 캐시 규칙 (선택사항)
+  - service: http_status:404

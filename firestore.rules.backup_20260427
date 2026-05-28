@@ -1,0 +1,24 @@
+// Backup of cloud.firestore live ruleset before 2026-04-27 deploy
+// Original ruleset name: projects/naegiwangbank/rulesets/f745cb3e-c860-4ea1-b809-b2468ae717b4
+// createTime: 2026-01-13T13:33:03.900276Z
+// 주: 2026-02-12 이후 만료된 기본 테스트 모드 룰. 즉 현재(2026-04-27)는 사실상 모든 client 요청 거부 상태.
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // This rule allows anyone with your Firestore database reference to view, edit,
+    // and delete all data in your Firestore database. It is useful for getting
+    // started, but it is configured to expire after 30 days because it
+    // leaves your app open to attackers. At that time, all client
+    // requests to your Firestore database will be denied.
+    //
+    // Make sure to write security rules for your app before that time, or else
+    // all client requests to your Firestore database will be denied until you Update
+    // your rules
+    match /{document=**} {
+      allow read, write: if request.time < timestamp.date(2026, 2, 12);
+    }
+  }
+}

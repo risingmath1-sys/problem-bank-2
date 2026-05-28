@@ -1,0 +1,57 @@
+{# 소스별 인덱서 schema fields 동적 렌더 — 로컬 _build_reg_form 동등.
+   각 field: {key, type: entry|combo|curr|subj, default, values, db_key, required} #}
+{% if not fields %}
+<div class="text-xs text-slate-500 italic">
+  ℹ 이 소스는 폼 입력 없음 — 모든 메타데이터(연도/학년/과목 등)를 파일명에서 자동 파싱합니다.
+</div>
+{% else %}
+<div class="space-y-2">
+  <div class="text-xs text-slate-300 font-bold">소스별 메타</div>
+  {% for f in fields %}
+  {% set name = f.db_key or f.key %}
+  <div class="space-y-1">
+    <label class="block text-xs text-slate-400">
+      {{ f.key }}
+      {% if f.required %}<span class="text-rose-300">*</span>{% endif %}
+    </label>
+
+    {% if f.type == 'entry' %}
+    <input type="text" name="{{ name }}" value="{{ f.default or '' }}"
+           {% if f.required %}required{% endif %}
+           class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm focus:border-blue-500 outline-none">
+
+    {% elif f.type == 'combo' %}
+    <select name="{{ name }}" {% if f.required %}required{% endif %}
+            class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm">
+      {% for v in f['values'] or [] %}
+      <option value="{{ v }}" {% if v == f.default %}selected{% endif %}>{{ v }}</option>
+      {% endfor %}
+    </select>
+
+    {% elif f.type == 'curr' %}
+    <select name="{{ name }}" {% if f.required %}required{% endif %}
+            hx-get="/partial/register/subjects"
+            hx-trigger="change"
+            hx-target="#subj-options"
+            hx-swap="innerHTML"
+            hx-include="this"
+            class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm">
+      {% for k in curriculum_keys %}
+      <option value="{{ k }}" {% if k == f.default %}selected{% endif %}>{{ k }}</option>
+      {% endfor %}
+    </select>
+
+    {% elif f.type == 'subj' %}
+    <select name="{{ name }}" id="subj-options"
+            class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm">
+      <option value="">(교육과정 먼저 선택)</option>
+    </select>
+
+    {% else %}
+    <input type="text" name="{{ name }}" value="{{ f.default or '' }}"
+           class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm">
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}

@@ -1,0 +1,888 @@
+{
+  "2022": [
+    {
+      "subject": "공통수학1",
+      "large_units": [
+        {
+          "name": "다항식",
+          "code": "A",
+          "medium_units": [
+            {
+              "code": "A1",
+              "name": "다항식의 연산"
+            },
+            {
+              "code": "A2",
+              "name": "항등식과 나머지정리"
+            },
+            {
+              "code": "A3",
+              "name": "인수분해"
+            }
+          ]
+        },
+        {
+          "name": "방정식과 부등식",
+          "code": "B",
+          "medium_units": [
+            {
+              "code": "B1",
+              "name": "복소수"
+            },
+            {
+              "code": "B2",
+              "name": "이차방정식"
+            },
+            {
+              "code": "B3",
+              "name": "이차함수"
+            },
+            {
+              "code": "B4",
+              "name": "여러가지 방정식"
+            },
+            {
+              "code": "B5",
+              "name": "여러가지 부등식"
+            }
+          ]
+        },
+        {
+          "name": "경우의수",
+          "code": "C",
+          "medium_units": [
+            {
+              "code": "C1",
+              "name": "경우의수"
+            },
+            {
+              "code": "C2",
+              "name": "순열"
+            },
+            {
+              "code": "C3",
+              "name": "조합"
+            }
+          ]
+        },
+        {
+          "name": "행렬",
+          "code": "D",
+          "medium_units": [
+            {
+              "code": "D1",
+              "name": "행렬의 뜻과 연산"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "subject": "공통수학2",
+      "large_units": [
+        {
+          "name": "도형의 방정식",
+          "code": "E",
+          "medium_units": [
+            {
+              "code": "E1",
+              "name": "점과 좌표"
+            },
+            {
+              "code": "E2",
+              "name": "직선의 방정식"
+            },
+            {
+              "code": "E3",
+              "name": "원의 방정식"
+            },
+            {
+              "code": "E4",
+              "name": "도형의 이동"
+            }
+          ]
+        },
+        {
+          "name": "집합과 명제",
+          "code": "F",
+          "medium_units": [
+            {
+              "code": "F1",
+              "name": "집합"
+            },
+            {
+              "code": "F2",
+              "name": "명제"
+            },
+            {
+              "code": "F3",
+              "name": "절대부등식"
+            }
+          ]
+        },
+        {
+          "name": "함수",
+          "code": "G",
+          "medium_units": [
+            {
+              "code": "G1",
+              "name": "함수론"
+            },
+            {
+              "code": "G2",
+              "name": "유리함수"
+            },
+            {
+              "code": "G3",
+              "name": "무리함수"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "subject": "대수",
+      "large_units": [
+        {
+          "name": "지수로그함수",
+          "code": "H",
+          "medium_units": [
+            {
+              "code": "H1",
+              "name": "지수"
+            },
+            {
+              "code": "H2",
+              "name": "로그"
+            },
+            {
+              "code": "H3",
+              "name": "지수함수"
+            },
+            {
+              "code": "H4",
+              "name": "로그함수"
+            }
+          ]
+        },
+        {
+          "name": "삼각함수",
+          "code": "I",
+          "medium_units": [
+            {
+              "code": "I1",
+              "name": "삼각함수 뜻과 성질"
+            },
+            {
+              "code": "I2",
+              "name": "삼각함수 그래프"
+            },
+            {
+              "code": "I3",
+              "name": "삼각형 활용"
+            }
+          ]
+        },
+        {
+          "name": "수열",
+          "code": "J",
+          "medium_units": [
+            {
+              "code": "J1",
+              "name": "등차수열과 등비수열"
+            },
+            {
+              "code": "J2",
+              "name": "수열의 합"
+            },
+            {
+              "code": "J3",
+              "name": "수학적 귀납법"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "subject": "미적분I",
+      "large_units": [
+        {
+          "name": "함수의 극한과 연속",
+          "code": "K",
+          "medium_units": [
+            {
+              "code": "K1",
+              "name": "함수의 극한"
+            },
+            {
+              "code": "K2",
+              "name": "함수의 연속"
+            }
+          ]
+        },
+        {
+          "name": "미분법",
+          "code": "L",
+          "medium_units": [
+            {
+              "code": "L1",
+              "name": "미분계수와 도함수"
+            },
+            {
+              "code": "L2",
+              "name": "접선"
+            },
+            {
+              "code": "L3",
+              "name": "극대극소"
+            },
+            {
+              "code": "L4",
+              "name": "방정식, 부등식과 미분"
+            },
+            {
+              "code": "L5",
+              "name": "속도, 가속도와 미분"
+            }
+          ]
+        },
+        {
+          "name": "적분법",
+          "code": "M",
+          "medium_units": [
+            {
+              "code": "M1",
+              "name": "부정적분"
+            },
+            {
+              "code": "M2",
+              "name": "정적분"
+            },
+            {
+              "code": "M3",
+              "name": "정적분의 활용"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "subject": "확률과통계",
+      "large_units": [
+        {
+          "name": "경우의 수",
+          "code": "N",
+          "medium_units": [
+            {
+              "code": "N1",
+              "name": "여러가지 순열"
+            },
+            {
+              "code": "N2",
+              "name": "중복조합"
+            },
+            {
+              "code": "N3",
+              "name": "이항정리"
+            }
+          ]
+        },
+        {
+          "name": "확률",
+          "code": "O",
+          "medium_units": [
+            {
+              "code": "O1",
+              "name": "확률의 뜻과 덧셈정리"
+            },
+            {
+              "code": "O2",
+              "name": "조건부확률"
+            }
+          ]
+        },
+        {
+          "name": "통계",
+          "code": "P",
+          "medium_units": [
+            {
+              "code": "P1",
+              "name": "이산확률분포"
+            },
+            {
+              "code": "P2",
+              "name": "정규분포"
+            },
+            {
+              "code": "P3",
+              "name": "통계적 추정"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "subject": "미적분II",
+      "large_units": [
+        {
+          "name": "수열의 극한",
+          "code": "Q",
+          "medium_units": [
+            {
+              "code": "Q1",
+              "name": "수열의 극한"
+            },
+            {
+              "code": "Q2",
+              "name": "급수"
+            }
+          ]
+        },
+        {
+          "name": "미분법",
+          "code": "R",
+          "medium_units": [
+            {
+              "code": "R1",
+              "name": "지수로그함수의 극한과 미분"
+            },
+            {
+              "code": "R2",
+              "name": "삼각함수 덧셈정리"
+            },
+            {
+              "code": "R3",
+              "name": "삼각함수의 극한과 미분"
+            },
+            {
+              "code": "R4",
+              "name": "여러가지 미분법"
+            },
+            {
+              "code": "R5",
+              "name": "도함수 활용"
+            }
+          ]
+        },
+        {
+          "name": "적분법",
+          "code": "S",
+          "medium_units": [
+            {
+              "code": "S1",
+              "name": "여러가지 적분법"
+            },
+            {
+              "code": "S2",
+              "name": "정적분"
+            },
+            {
+              "code": "S3",
+              "name": "정적분의 활용"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "subject": "기하",
+      "large_units": [
+        {
+          "name": "이차곡선",
+          "code": "T",
+          "medium_units": [
+            {
+              "code": "T1",
+              "name": "포물선"
+            },
+            {
+              "code": "T2",
+              "name": "타원"
+            },
+            {
+              "code": "T3",
+              "name": "쌍곡선"
+            },
+            {
+              "code": "T4",
+              "name": "이차곡선의 접선"
+            }
+          ]
+        },
+        {
+          "name": "공간도형",
+          "code": "U",
+          "medium_units": [
+            {
+              "code": "U1",
+              "name": "공간도형"
+            },
+            {
+              "code": "U2",
+              "name": "공간좌표"
+            }
+          ]
+        },
+        {
+          "name": "벡터",
+          "code": "V",
+          "medium_units": [
+            {
+              "code": "V1",
+              "name": "평면벡터의 연산"
+            },
+            {
+              "code": "V2",
+              "name": "평면벡터의 성분과 내적"
+            },
+            {
+              "code": "V3",
+              "name": "공간벡터"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "2015": [
+    {
+      "subject": "수학(상)",
+      "large_units": [
+        {
+          "name": "다항식",
+          "code": "A",
+          "medium_units": [
+            {"code": "A1", "name": "다항식의 연산"},
+            {"code": "A2", "name": "항등식과 나머지정리"},
+            {"code": "A3", "name": "인수분해"}
+          ]
+        },
+        {
+          "name": "방정식과 부등식",
+          "code": "B",
+          "medium_units": [
+            {"code": "B1", "name": "복소수"},
+            {"code": "B2", "name": "이차방정식"},
+            {"code": "B3", "name": "이차함수"},
+            {"code": "B4", "name": "여러가지 방정식"},
+            {"code": "B5", "name": "여러가지 부등식"}
+          ]
+        },
+        {
+          "name": "도형의 방정식",
+          "code": "E",
+          "medium_units": [
+            {"code": "E1", "name": "점과 좌표"},
+            {"code": "E2", "name": "직선의 방정식"},
+            {"code": "E3", "name": "원의 방정식"},
+            {"code": "E4", "name": "도형의 이동"}
+          ]
+        },
+        {
+          "name": "집합과 명제",
+          "code": "F",
+          "medium_units": [
+            {"code": "F1", "name": "집합"},
+            {"code": "F2", "name": "명제"},
+            {"code": "F3", "name": "절대부등식"}
+          ]
+        }
+      ]
+    },
+    {
+      "subject": "수학(하)",
+      "large_units": [
+        {
+          "name": "함수",
+          "code": "G",
+          "medium_units": [
+            {"code": "G1", "name": "함수론"},
+            {"code": "G2", "name": "유리함수"},
+            {"code": "G3", "name": "무리함수"}
+          ]
+        },
+        {
+          "name": "경우의 수",
+          "code": "C",
+          "medium_units": [
+            {"code": "C1", "name": "경우의수"},
+            {"code": "C2", "name": "순열"},
+            {"code": "C3", "name": "조합"}
+          ]
+        }
+      ]
+    },
+    {
+      "subject": "수학1",
+      "large_units": [
+        {
+          "name": "지수함수와 로그함수",
+          "code": "H",
+          "medium_units": [
+            {"code": "H1", "name": "지수"},
+            {"code": "H2", "name": "로그"},
+            {"code": "H3", "name": "지수함수"},
+            {"code": "H4", "name": "로그함수"}
+          ]
+        },
+        {
+          "name": "삼각함수",
+          "code": "I",
+          "medium_units": [
+            {"code": "I1", "name": "삼각함수 뜻과 성질"},
+            {"code": "I2", "name": "삼각함수 그래프"},
+            {"code": "I3", "name": "삼각형 활용"}
+          ]
+        },
+        {
+          "name": "수열",
+          "code": "J",
+          "medium_units": [
+            {"code": "J1", "name": "등차수열과 등비수열"},
+            {"code": "J2", "name": "수열의 합"},
+            {"code": "J3", "name": "수학적 귀납법"}
+          ]
+        }
+      ]
+    },
+    {
+      "subject": "수학2",
+      "large_units": [
+        {
+          "name": "함수의 극한과 연속",
+          "code": "K",
+          "medium_units": [
+            {"code": "K1", "name": "함수의 극한"},
+            {"code": "K2", "name": "함수의 연속"}
+          ]
+        },
+        {
+          "name": "미분법",
+          "code": "L",
+          "medium_units": [
+            {"code": "L1", "name": "미분계수와 도함수"},
+            {"code": "L2", "name": "접선"},
+            {"code": "L3", "name": "극대극소"},
+            {"code": "L4", "name": "방정식, 부등식과 미분"},
+            {"code": "L5", "name": "속도, 가속도와 미분"}
+          ]
+        },
+        {
+          "name": "적분법",
+          "code": "M",
+          "medium_units": [
+            {"code": "M1", "name": "부정적분"},
+            {"code": "M2", "name": "정적분"},
+            {"code": "M3", "name": "정적분의 활용"}
+          ]
+        }
+      ]
+    },
+    {
+      "subject": "미적분",
+      "large_units": [
+        {
+          "name": "수열의 극한",
+          "code": "Q",
+          "medium_units": [
+            {"code": "Q1", "name": "수열의 극한"},
+            {"code": "Q2", "name": "급수"}
+          ]
+        },
+        {
+          "name": "미분법",
+          "code": "R",
+          "medium_units": [
+            {"code": "R1", "name": "지수로그함수의 극한과 미분"},
+            {"code": "R2", "name": "삼각함수 덧셈정리"},
+            {"code": "R3", "name": "삼각함수의 극한과 미분"},
+            {"code": "R4", "name": "여러가지 미분법"},
+            {"code": "R5", "name": "도함수 활용"}
+          ]
+        },
+        {
+          "name": "적분법",
+          "code": "S",
+          "medium_units": [
+            {"code": "S1", "name": "여러가지 적분법"},
+            {"code": "S2", "name": "정적분"},
+            {"code": "S3", "name": "정적분의 활용"}
+          ]
+        }
+      ]
+    },
+    {
+      "subject": "확률과 통계",
+      "large_units": [
+        {
+          "name": "경우의 수",
+          "code": "N",
+          "medium_units": [
+            {"code": "N1", "name": "여러가지 순열"},
+            {"code": "N2", "name": "중복조합"},
+            {"code": "N3", "name": "이항정리"}
+          ]
+        },
+        {
+          "name": "확률",
+          "code": "O",
+          "medium_units": [
+            {"code": "O1", "name": "확률의 뜻과 덧셈정리"},
+            {"code": "O2", "name": "조건부확률"}
+          ]
+        },
+        {
+          "name": "통계",
+          "code": "P",
+          "medium_units": [
+            {"code": "P1", "name": "이산확률분포"},
+            {"code": "P2", "name": "정규분포"},
+            {"code": "P3", "name": "통계적 추정"}
+          ]
+        }
+      ]
+    },
+    {
+      "subject": "기하",
+      "large_units": [
+        {
+          "name": "이차곡선",
+          "code": "T",
+          "medium_units": [
+            {"code": "T1", "name": "포물선"},
+            {"code": "T2", "name": "타원"},
+            {"code": "T3", "name": "쌍곡선"},
+            {"code": "T4", "name": "이차곡선의 접선"}
+          ]
+        },
+        {
+          "name": "평면벡터",
+          "code": "V",
+          "medium_units": [
+            {"code": "V1", "name": "평면벡터의 연산"},
+            {"code": "V2", "name": "평면벡터의 성분과 내적"}
+          ]
+        },
+        {
+          "name": "공간도형과 공간벡터",
+          "code": "U",
+          "medium_units": [
+            {"code": "U1", "name": "공간도형"},
+            {"code": "U2", "name": "공간좌표"},
+            {"code": "V3", "name": "공간벡터"}
+          ]
+        }
+      ]
+    }
+  ],
+  "middle": [
+    {
+      "subject": "중등1",
+      "large_units": [
+        {
+          "name": "수와 연산",
+          "code": "ZA",
+          "medium_units": [
+            {"code": "ZA1", "name": "소인수분해"},
+            {"code": "ZA2", "name": "최대공약수와 최소공배수"}
+          ]
+        },
+        {
+          "name": "정수와 유리수",
+          "code": "ZB",
+          "medium_units": [
+            {"code": "ZB1", "name": "정수와 유리수"},
+            {"code": "ZB2", "name": "유리수의 계산"}
+          ]
+        },
+        {
+          "name": "문자와 식",
+          "code": "ZC",
+          "medium_units": [
+            {"code": "ZC1", "name": "문자와 식"},
+            {"code": "ZC2", "name": "일차방정식의 풀이"},
+            {"code": "ZC3", "name": "일차방정식의 활용"}
+          ]
+        },
+        {
+          "name": "좌표와 함수",
+          "code": "ZD",
+          "medium_units": [
+            {"code": "ZD1", "name": "좌표와 그래프"},
+            {"code": "ZD2", "name": "정비례와 반비례"}
+          ]
+        },
+        {
+          "name": "기본 도형",
+          "code": "ZF",
+          "medium_units": [
+            {"code": "ZF1", "name": "기본 도형"},
+            {"code": "ZF2", "name": "위치 관계"},
+            {"code": "ZF3", "name": "평행선"},
+            {"code": "ZF4", "name": "작도와 합동"}
+          ]
+        },
+        {
+          "name": "평면도형",
+          "code": "ZG",
+          "medium_units": [
+            {"code": "ZG1", "name": "평면도형의 성질"},
+            {"code": "ZG2", "name": "원과 부채꼴"}
+          ]
+        },
+        {
+          "name": "입체도형",
+          "code": "ZH",
+          "medium_units": [
+            {"code": "ZH1", "name": "입체도형의 성질"},
+            {"code": "ZH2", "name": "회전체"},
+            {"code": "ZH3", "name": "입체도형의 부피와 겉넓이"}
+          ]
+        },
+        {
+          "name": "자료 정리",
+          "code": "ZE",
+          "medium_units": [
+            {"code": "ZE1", "name": "자료의 정리"},
+            {"code": "ZE2", "name": "자료의 분석"}
+          ]
+        }
+      ]
+    },
+    {
+      "subject": "중등2",
+      "large_units": [
+        {
+          "name": "수와 식",
+          "code": "ZI",
+          "medium_units": [
+            {"code": "ZI1", "name": "유리수와 순환소수"},
+            {"code": "ZI2", "name": "단항식의 계산"},
+            {"code": "ZI3", "name": "다항식의 계산"}
+          ]
+        },
+        {
+          "name": "부등식",
+          "code": "ZK",
+          "medium_units": [
+            {"code": "ZK1", "name": "일차부등식"},
+            {"code": "ZK2", "name": "연립일차부등식"}
+          ]
+        },
+        {
+          "name": "연립방정식",
+          "code": "ZJ",
+          "medium_units": [
+            {"code": "ZJ1", "name": "연립일차방정식의 풀이"},
+            {"code": "ZJ2", "name": "연립일차방정식의 활용"}
+          ]
+        },
+        {
+          "name": "일차함수",
+          "code": "ZL",
+          "medium_units": [
+            {"code": "ZL1", "name": "일차함수와 그 그래프"},
+            {"code": "ZL2", "name": "일차함수와 일차방정식의 관계"}
+          ]
+        },
+        {
+          "name": "삼각형과 사각형",
+          "code": "ZN",
+          "medium_units": [
+            {"code": "ZN1", "name": "삼각형의 성질"},
+            {"code": "ZN2", "name": "평행사변형"},
+            {"code": "ZN3", "name": "여러 가지 사각형"}
+          ]
+        },
+        {
+          "name": "도형의 닮음",
+          "code": "ZO",
+          "medium_units": [
+            {"code": "ZO1", "name": "도형의 닮음"},
+            {"code": "ZO2", "name": "평행선과 선분의 길이의 비"},
+            {"code": "ZO3", "name": "삼각형의 무게중심"},
+            {"code": "ZO4", "name": "닮은 도형의 넓이와 부피"}
+          ]
+        },
+        {
+          "name": "피타고라스 정리",
+          "code": "ZU",
+          "medium_units": [
+            {"code": "ZU1", "name": "피타고라스 정리"},
+            {"code": "ZU2", "name": "피타고라스 정리와 도형"},
+            {"code": "ZU3", "name": "피타고라스 정리의 도형에의 활용"}
+          ]
+        },
+        {
+          "name": "확률",
+          "code": "ZM",
+          "medium_units": [
+            {"code": "ZM1", "name": "경우의 수"},
+            {"code": "ZM2", "name": "확률"}
+          ]
+        }
+      ]
+    },
+    {
+      "subject": "중등3",
+      "large_units": [
+        {
+          "name": "수와 식",
+          "code": "ZP",
+          "medium_units": [
+            {"code": "ZP1", "name": "제곱근과 실수"},
+            {"code": "ZP2", "name": "근호를 포함한 식의 계산"}
+          ]
+        },
+        {
+          "name": "다항식",
+          "code": "ZQ",
+          "medium_units": [
+            {"code": "ZQ1", "name": "다항식의 곱셈(곱셈공식)"},
+            {"code": "ZQ2", "name": "인수분해"}
+          ]
+        },
+        {
+          "name": "이차방정식",
+          "code": "ZR",
+          "medium_units": [
+            {"code": "ZR1", "name": "이차방정식의 풀이"},
+            {"code": "ZR2", "name": "이차방정식의 활용"}
+          ]
+        },
+        {
+          "name": "이차함수",
+          "code": "ZS",
+          "medium_units": [
+            {"code": "ZS1", "name": "이차함수의 그래프"},
+            {"code": "ZS2", "name": "이차함수의 활용"}
+          ]
+        },
+        {
+          "name": "삼각비",
+          "code": "ZV",
+          "medium_units": [
+            {"code": "ZV1", "name": "삼각비"},
+            {"code": "ZV2", "name": "삼각비의 활용"}
+          ]
+        },
+        {
+          "name": "원",
+          "code": "ZW",
+          "medium_units": [
+            {"code": "ZW1", "name": "원과 직선"},
+            {"code": "ZW2", "name": "원주각"}
+          ]
+        },
+        {
+          "name": "통계",
+          "code": "ZT",
+          "medium_units": [
+            {"code": "ZT1", "name": "대푯값과 산포도"},
+            {"code": "ZX1", "name": "상관관계"}
+          ]
+        }
+      ]
+    }
+  ]
+}

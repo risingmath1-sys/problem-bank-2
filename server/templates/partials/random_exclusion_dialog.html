@@ -1,0 +1,119 @@
+{# 제외설정 다이얼로그 — 로컬 ExclusionSettingDialog (main_gui.py:7581) 동등.
+   selected_tids 가 있으면 모든 폴더 body 자동 fetch (헤더는 여전히 닫힘 — 시각적으로 lazy).
+   → 로컬과 동일: 폴더 헤더 닫혀있어도 body widget(체크박스 DOM)은 메모리/DOM에 존재 → submit 정확.
+   selected_tids 가 없으면 lazy (첫 진입 빠름).
+#}
+{% set auto = selected_tids|length > 0 %}
+<div id="exclusion-dialog" class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
+     onclick="if(event.target===this){this.remove();}">
+  <div class="bg-slate-900 border border-slate-700 rounded-xl shadow-xl w-full max-w-3xl max-h-[85vh] flex flex-col">
+    <header class="flex items-center justify-between px-4 py-3 border-b border-slate-700">
+      <div>
+        <h2 class="text-lg font-bold">📋 일회성 출제 제외 시험지 선택</h2>
+        <p class="text-xs text-slate-400 mt-1">체크한 시험지의 모든 문제는 이번 출제에서만 제외됩니다 (DB 미저장).</p>
+      </div>
+      <button type="button"
+              onclick="document.getElementById('exclusion-dialog').remove()"
+              class="text-slate-400 hover:text-white text-2xl leading-none">×</button>
+    </header>
+
+    <form id="exclusion-form"
+          hx-post="/partial/random/exclusion_apply"
+          hx-target="#exclusion-apply-result"
+          hx-swap="innerHTML"
+          class="flex flex-col flex-1 overflow-hidden">
+
+      <div class="flex-1 overflow-y-auto p-4 space-y-2">
+        {# 루트 (최상위) 시험지 #}
+        <details class="bg-slate-800/40 border border-slate-700 rounded" data-folder-id="root">
+          <summary class="cursor-pointer px-3 py-2 text-sm font-bold flex items-center gap-2"
+                   hx-get="/partial/random/exclusion_folder/root"
+                   hx-trigger="{% if auto %}load, {% endif %}click once"
+                   hx-target="next .folder-body"
+                   hx-swap="innerHTML">
+            <input type="checkbox" class="folder-master accent-rose-500"
+                   title="이 폴더 시험지 전체 선택/해제"
+                   onclick="event.stopPropagation(); applyFolderState(this.closest('details'), this.checked);">
+            📂 루트 (최상위)
+          </summary>
+          <div class="folder-body"></div>
+        </details>
+
+        {# 루트 폴더들 #}
+        {% for node in folder_tree %}
+        <details class="bg-slate-800/40 border border-slate-700 rounded" data-folder-id="{{ node.id }}">
+          <summary class="cursor-pointer px-3 py-2 text-sm font-bold flex items-center gap-2"
+                   hx-get="/partial/random/exclusion_folder/{{ node.id }}"
+                   hx-trigger="{% if auto %}load, {% endif %}click once"
+                   hx-target="next .folder-body"
+                   hx-swap="innerHTML">
+            <input type="checkbox" class="folder-master accent-rose-500"
+                   title="이 폴더(하위 포함) 시험지 전체 선택/해제"
+                   onclick="event.stopPropagation(); applyFolderState(this.closest('details'), this.checked);">
+            {% if node.is_protected %}🔒{% else %}📁{% endif %} {{ node.name }}
+          </summary>
+          <div class="folder-body"></div>
+        </details>
+        {% endfor %}
+
+        {% if not folder_tree %}
+        <div class="text-center text-slate-500 text-xs py-4">폴더 없음 — 루트 시험지만 있을 수 있습니다.</div>
+        {% endif %}
+      </div>
+
+      <footer class="px-4 py-3 border-t border-slate-700 flex items-center justify-between gap-2">
+        <div id="exclusion-apply-result" class="flex-1 text-xs"></div>
+        <button type="button"
+                onclick="document.querySelectorAll('#exclusion-form input.excl-tid-visible, #exclusion-form input.folder-master').forEach(function(c){c.checked=false;});"
+                title="시험지·폴더 마스터 모두 해제 (적용 버튼 눌러야 반영됨)"
+                class="bg-slate-700 hover:bg-slate-600 rounded px-3 py-1 text-xs">⚡ 전체 해제</button>
+        <button type="button"
+                onclick="document.getElementById('exclusion-dialog').remove()"
+                class="bg-slate-700 hover:bg-slate-600 rounded px-3 py-1 text-xs">닫기</button>
+        <button type="submit"
+                class="bg-blue-600 hover:bg-blue-500 rounded px-4 py-1.5 text-sm font-bold">✔ 적용</button>
+      </footer>
+    </form>
+  </div>
+</div>
+
+<script>
+  // 폴더 마스터 체크박스 → 그 폴더의 모든 가시 체크박스 + 자식 폴더 마스터까지 재귀 토글.
+  // (이제 body 가 미리 fetch 되어 있어 lazy fetch 트리거 필요 없음 — selected_tids 없으면 lazy 그대로 유지)
+  function applyFolderState(folderEl, state) {
+    if (!folderEl) return;
+    const body = folderEl.querySelector(':scope > .folder-body');
+    if (!body) return;
+
+    body.querySelectorAll('input.excl-tid-visible').forEach(function(cb) {
+      cb.checked = state;
+    });
+
+    body.querySelectorAll(':scope > div > details[data-folder-id]').forEach(function(child) {
+      const childMaster = child.querySelector(':scope > summary > input.folder-master');
+      if (childMaster) childMaster.checked = state;
+      const childBody = child.querySelector(':scope > .folder-body');
+      if (childBody && childBody.children.length === 0) {
+        if (window.htmx) {
+          window.htmx.ajax('GET', '/partial/random/exclusion_folder/' + child.dataset.folderId,
+                           { target: childBody, swap: 'innerHTML' });
+        }
+      } else {
+        applyFolderState(child, state);
+      }
+    });
+  }
+
+  // 자동 fetch 흐름 마무리 — 부모 마스터가 checked 면 새로 들어온 body 에도 재귀 적용
+  document.body.addEventListener('htmx:afterSwap', function(e) {
+    const target = e.detail.target;
+    if (!target || !target.classList || !target.classList.contains('folder-body')) return;
+    const folder = target.parentElement;
+    if (folder && folder.matches && folder.matches('details[data-folder-id]')) {
+      const master = folder.querySelector(':scope > summary > input.folder-master');
+      if (master && master.checked) {
+        applyFolderState(folder, true);
+      }
+    }
+  });
+</script>

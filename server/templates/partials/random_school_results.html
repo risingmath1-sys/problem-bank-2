@@ -1,0 +1,10 @@
+{# 학교 검색 결과 — 클릭 시 JS addSchoolTag 으로 태그 영역에 추가. #}
+<div class="grid grid-cols-2 gap-1">
+  {% for s in schools %}
+  <button type="button"
+          onclick="window.addSchoolTag && window.addSchoolTag({{ s|tojson }})"
+          class="text-xs bg-slate-700 hover:bg-blue-600 rounded px-2 py-1 text-left truncate">
+    {{ s }}
+  </button>
+  {% endfor %}
+</div>

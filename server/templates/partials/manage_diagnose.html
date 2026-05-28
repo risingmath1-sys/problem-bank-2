@@ -1,0 +1,56 @@
+{# 파일 진단 결과 — 로컬 main_gui.py:5128-5183 _mgr_diagnose_selected 동등.
+   파일별: 존재여부 / 경로 / DB 등록 / 좌표 누락 / 해결책 #}
+<div class="bg-slate-800 border border-slate-700 rounded-xl p-3 space-y-3">
+  <div class="text-sm text-slate-300 font-bold">
+    🔎 진단 대상: {{ total_files }}개 파일 / {{ total_problems }}개 문제
+  </div>
+
+  {% for f in files_report %}
+  <div class="bg-slate-900/50 border border-slate-700 rounded-lg p-3 space-y-1">
+    <div class="text-xs font-mono text-slate-200 break-all">━━━ {{ f.file_name }} ━━━</div>
+    <div class="text-xs">
+      파일 존재 :
+      {% if f.exists %}
+      <span class="text-emerald-300">✅ 있음</span>
+      {% else %}
+      <span class="text-rose-300">❌ 없음 (원본 사라짐)</span>
+      {% endif %}
+    </div>
+    {% if f.found_path %}
+    <div class="text-xs text-slate-400 break-all">경로 : {{ f.found_path }}</div>
+    {% endif %}
+    <div class="text-xs">
+      DB 등록 :
+      <span class="text-slate-200">{{ f.total }}문제</span>
+      <span class="text-slate-500">(제외 {{ f.excluded }}건)</span>
+    </div>
+    {% if f.no_coord_count > 0 %}
+    <div class="text-xs text-amber-300">
+      ⚠ 좌표 없음 : {{ f.no_coord_count }}문제
+      (미주번호: {{ f.no_coord_nums[:15]|join(', ') }}{% if f.no_coord_count > 15 %} ... 외 {{ f.no_coord_count - 15 }}건{% endif %})
+    </div>
+    {% else %}
+    <div class="text-xs text-slate-400">좌표 상태 : 모두 정상</div>
+    {% endif %}
+
+    <div class="text-xs text-slate-300 mt-1">💡 해결책</div>
+    {% if not f.exists %}
+    <ul class="text-xs text-slate-400 ml-3 list-disc">
+      <li>원본 HWP 파일이 이동·삭제·이름변경되었을 가능성</li>
+      <li>원본 폴더에서 파일 위치 확인 후 복구</li>
+      <li>복구 후 해당 파일 재인덱싱 권장</li>
+    </ul>
+    {% elif f.no_coord_count > 0 %}
+    <ul class="text-xs text-slate-400 ml-3 list-disc">
+      <li>좌표 정보가 없어 출제 시 해당 문제 스킵됨</li>
+      <li>이 파일만 재인덱싱하면 복구 가능</li>
+    </ul>
+    {% else %}
+    <ul class="text-xs text-slate-400 ml-3 list-disc">
+      <li>DB 상태는 정상. 일시적 출제 오류 가능성</li>
+      <li>재출제 시도 권장</li>
+    </ul>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>

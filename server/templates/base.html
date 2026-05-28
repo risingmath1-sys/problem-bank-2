@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}상승 Solution{% endblock %}</title>
+  <link rel="icon" href="/static/logo.png">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12" defer></script>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen">
+  {% if user %}
+  <nav class="bg-slate-800 border-b border-slate-700 px-6 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-6">
+      <a href="/" class="flex items-center gap-2 font-bold text-blue-400">
+        <img src="/static/logo.png" alt="상승" class="h-7 w-7">
+        <span>상승 Solution</span>
+      </a>
+      <a href="/random" class="text-slate-300 hover:text-white">랜덤 출제</a>
+      <a href="/original" class="text-slate-300 hover:text-white">원본 출제</a>
+      <a href="/library" class="text-slate-300 hover:text-white">시험지 관리</a>
+      {% if user.role == 'admin' %}
+      <a href="/register" class="text-slate-300 hover:text-white">문제 등록</a>
+      <a href="/manage" class="text-slate-300 hover:text-white">문제 관리</a>
+      <a href="/users" class="text-slate-300 hover:text-white">사용자 관리</a>
+      {% endif %}
+    </div>
+    <div class="flex items-center gap-4 text-sm">
+      <span class="text-slate-400">{{ user.display_name or user.display_id }}</span>
+      <button hx-post="/api/auth/logout" class="text-slate-400 hover:text-white">로그아웃</button>
+    </div>
+  </nav>
+  {% endif %}
+  <main class="container mx-auto px-6 py-8">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

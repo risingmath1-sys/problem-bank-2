@@ -1,0 +1,29 @@
+{% if rows %}
+<details class="bg-slate-900 border border-slate-700 rounded">
+  <summary class="cursor-pointer px-3 py-2 text-xs text-slate-300 hover:bg-slate-800">
+    📊 단원별 분포 ({{ rows|length }}종 · 총 {{ total }}문항) — 클릭해 펼침
+  </summary>
+  <div class="max-h-[200px] overflow-y-auto px-3 py-2 border-t border-slate-700">
+    <table class="w-full text-xs">
+      <thead class="text-slate-400">
+        <tr>
+          <th class="text-left py-1">대단원</th>
+          <th class="text-left py-1">중단원</th>
+          <th class="text-right py-1 w-16">개수</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr class="border-t border-slate-800">
+          <td class="py-0.5 text-slate-300">{{ r.large_unit or '-' }}</td>
+          <td class="py-0.5 text-slate-400">{{ r.middle_unit or '-' }}</td>
+          <td class="py-0.5 text-right text-blue-300">{{ r.count }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</details>
+{% else %}
+<div class="text-slate-500 text-xs">단원 정보 없음.</div>
+{% endif %}

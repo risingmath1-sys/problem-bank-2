@@ -1,0 +1,27 @@
+{# 원본 HWP 파일 폴더 설정 — admin 전용. 로컬 main_gui.py:287-302 동등. #}
+<div class="bg-slate-800 border border-slate-700 rounded-xl p-3">
+  <form hx-post="/api/source_folder"
+        hx-target="this"
+        hx-swap="outerHTML"
+        class="flex items-center gap-2 flex-wrap">
+    <label class="text-xs text-slate-400 whitespace-nowrap">폴더 경로:</label>
+    <input type="text" name="new_path" value="{{ current }}"
+           {% if env_lock %}readonly{% endif %}
+           class="flex-1 min-w-[300px] bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-sm
+                  {% if env_lock %}opacity-60 cursor-not-allowed{% endif %}
+                  focus:border-blue-500 outline-none">
+    {% if env_lock %}
+    <span class="text-xs text-amber-300">환경변수로 고정됨</span>
+    {% else %}
+    <button type="submit"
+            class="bg-blue-600 hover:bg-blue-500 rounded px-4 py-1.5 text-sm font-bold whitespace-nowrap">
+      변경 저장
+    </button>
+    {% endif %}
+    {% if exists %}
+    <span class="text-xs text-emerald-300">✅ 폴더 존재</span>
+    {% else %}
+    <span class="text-xs text-rose-300">❌ 폴더 없음</span>
+    {% endif %}
+  </form>
+</div>

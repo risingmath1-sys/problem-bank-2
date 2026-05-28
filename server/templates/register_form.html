@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}{{ source_label }} 등록 — 상승 Solution{% endblock %}
+{% block content %}
+<div class="space-y-4">
+  <header class="flex items-center justify-between gap-3 flex-wrap">
+    <div>
+      <a href="/register" class="text-xs text-slate-400 hover:text-slate-200">← 소스 선택으로</a>
+      <h1 class="text-2xl font-bold mt-1">📚 {{ source_label }} 등록</h1>
+      <p class="text-xs text-slate-500 mt-1">소스: <span class="font-mono">{{ source }}</span></p>
+    </div>
+    <a href="/" class="bg-slate-700 hover:bg-slate-600 rounded px-3 py-1.5 text-sm">홈</a>
+  </header>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <!-- 좌: 인덱싱 폼 -->
+    <aside class="bg-slate-800 border border-slate-700 rounded-xl p-4 space-y-3">
+      <div class="text-sm font-bold text-slate-200">스캔 설정</div>
+
+      <form id="register-form"
+            hx-post="/api/register/start"
+            hx-target="#register-progress"
+            hx-swap="innerHTML"
+            class="space-y-3">
+        <input type="hidden" name="source" value="{{ source }}">
+
+        <!-- 모드: 폴더 / 단일 파일 -->
+        <div class="space-y-1">
+          <label class="block text-xs text-slate-400">대상 모드</label>
+          <div class="flex gap-2 text-xs">
+            <label class="cursor-pointer">
+              <input type="radio" name="is_folder" value="1" checked class="peer sr-only">
+              <span class="px-3 py-1 rounded border border-slate-600 peer-checked:bg-blue-600 peer-checked:border-blue-500">📁 폴더</span>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="is_folder" value="0" class="peer sr-only">
+              <span class="px-3 py-1 rounded border border-slate-600 peer-checked:bg-blue-600 peer-checked:border-blue-500">📄 단일 파일</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- 경로 -->
+        <div class="space-y-1">
+          <label class="block text-xs text-slate-400">서버 측 절대 경로</label>
+          <input type="text" name="target_path" required
+                 placeholder="예: G:\문제은행\문제들\10내신기출A"
+                 class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm font-mono focus:border-blue-500 outline-none">
+          <div class="text-xs text-slate-500">서버 PC 의 폴더 또는 파일 경로. 업로드는 추후.</div>
+        </div>
+
+        <!-- 소스별 schema fields (HTMX 동적 로드).
+             form 의 hx-target=#register-progress 가 상속되지 않도록 명시적으로 this 지정. -->
+        <div id="register-schema"
+             hx-get="/partial/register/schema/{{ source }}"
+             hx-trigger="load"
+             hx-target="this"
+             hx-swap="innerHTML">
+          <div class="text-xs text-slate-500">소스별 폼 로드 중...</div>
+        </div>
+
+        <!-- 공통 옵션 -->
+        <div class="space-y-1 pt-2 border-t border-slate-700">
+          <label class="text-xs text-slate-300 flex items-center gap-1">
+            <input type="checkbox" name="force_reindex" value="1">
+            기존 데이터 덮어쓰기
+          </label>
+          <label class="text-xs text-slate-300 flex items-center gap-1">
+            <input type="checkbox" name="stealth_mode" value="1" checked>
+            스텔스 모드 (백그라운드)
+          </label>
+        </div>
+
+        <button type="submit"
+                class="w-full bg-emerald-600 hover:bg-emerald-500 rounded px-4 py-2 text-sm font-bold transition">
+          ▶ 엔진 가동 시작
+        </button>
+      </form>
+    </aside>
+
+    <!-- 우: 진행률 + 로그 -->
+    <main class="lg:col-span-2 bg-slate-800 border border-slate-700 rounded-xl p-4">
+      <div id="register-progress">
+        <div class="text-sm text-slate-400">
+          왼쪽 폼을 채우고 <b>엔진 가동 시작</b>을 누르면 진행률이 여기 표시됩니다.
+        </div>
+        <div class="text-xs text-slate-500 mt-3">
+          ⚠ 한글(HWP) COM 자동화는 출제 큐와 직렬화됩니다. 인덱싱 중 다른 사용자의 출제 요청은
+          큐에서 대기합니다. 시간이 오래 걸리는 폴더는 사용자 트래픽이 적은 시간에 처리하세요.
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+{% endblock %}

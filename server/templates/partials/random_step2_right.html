@@ -1,0 +1,402 @@
+{#
+  Step 2 우측 패널 — 보기 및 필터 옵션 (메뉴 1-6 구현됨, 7-8 진행 중).
+  로컬 _build_right_panel_options (main_gui.py:2547) 의 포팅.
+
+  컨텍스트:
+    filter_state, DIFFICULTY_LABELS, TYPE_LABELS, SOURCE_LABELS, ALL_SOURCES,
+    ALL_PREFS, ALL_YEARS
+#}
+{% set fs = filter_state %}
+
+{# 모든 필터 input 의 공통 HTMX 속성 #}
+{% set hx_common = 'hx-post="/partial/random/step2_table" hx-target="#step2-table-wrap" hx-swap="outerHTML" hx-include="#step2-form" hx-trigger="change delay:150ms"' %}
+
+<aside class="bg-slate-800/60 border border-slate-700 rounded-xl p-4 space-y-4 text-sm overflow-y-auto" style="max-height: 80vh">
+  <input type="hidden" name="filter_panel" value="1">
+  <div class="font-semibold text-blue-300">보기 및 필터 옵션</div>
+
+  <!-- 1. 소스 필터 -->
+  <section class="space-y-2">
+    <div class="flex items-center gap-2">
+      <label class="flex items-center gap-1 font-semibold text-slate-200">
+        <input type="checkbox" name="source_filter_on" value="1"
+               {% if fs.source_filter_on %}checked{% endif %}
+               class="accent-blue-500"
+               {{ hx_common|safe }}>
+        소스 필터
+      </label>
+      <button type="button" class="text-xs bg-slate-700 hover:bg-slate-600 rounded px-2 py-0.5"
+              onclick="document.querySelectorAll('input[name=sources]').forEach(c=>c.checked=false); htmx.trigger('#step2-form','change')">
+        전체해제
+      </button>
+    </div>
+    <div class="grid grid-cols-2 gap-1 pl-5">
+      {% for code in ALL_SOURCES %}
+      <label class="flex items-center gap-1 text-slate-300">
+        <input type="checkbox" name="sources" value="{{ code }}"
+               {% if code in fs.active_sources %}checked{% endif %}
+               class="accent-blue-500"
+               {{ hx_common|safe }}>
+        {{ SOURCE_LABELS[code] }}
+      </label>
+      {% endfor %}
+    </div>
+  </section>
+
+  <hr class="border-slate-700">
+
+  <!-- 2. 수준별 보기 (+ 정답률) -->
+  <section class="space-y-2">
+    <label class="flex items-center gap-1 font-semibold text-slate-200">
+      <input type="checkbox" name="view_level" value="1"
+             {% if fs.view_level %}checked{% endif %}
+             class="accent-blue-500"
+             {{ hx_common|safe }}>
+      수준별 보기
+    </label>
+    <div class="flex gap-3 pl-5 text-slate-300">
+      {% for code, label in DIFFICULTY_LABELS.items() %}
+      <label class="flex items-center gap-1">
+        <input type="checkbox" name="difficulties" value="{{ code }}"
+               {% if code in fs.active_difficulties %}checked{% endif %}
+               class="accent-blue-500"
+               {{ hx_common|safe }}>
+        {{ label }}
+      </label>
+      {% endfor %}
+    </div>
+    {# 정답률 (수준별 보기 하위 옵션) #}
+    <div class="flex items-center gap-1 pl-5 text-slate-300 text-xs">
+      <label class="flex items-center gap-1">
+        <input type="checkbox" name="rate_use" value="1"
+               {% if fs.rate_use %}checked{% endif %}
+               class="accent-blue-500" {{ hx_common|safe }}>
+        정답률
+      </label>
+      <input type="number" name="rate_min" min="0" max="100" step="1"
+             value="{{ fs.rate_min if fs.rate_min is not none else 0 }}"
+             {% if not fs.rate_use %}disabled{% endif %}
+             class="w-12 bg-slate-900 border border-slate-700 rounded px-1 text-center disabled:opacity-50"
+             hx-post="/partial/random/step2_table" hx-target="#step2-table-wrap" hx-swap="outerHTML"
+             hx-include="#step2-form" hx-trigger="change delay:300ms">
+      <span>% ~</span>
+      <input type="number" name="rate_max" min="0" max="100" step="1"
+             value="{{ fs.rate_max if fs.rate_max is not none else 100 }}"
+             {% if not fs.rate_use %}disabled{% endif %}
+             class="w-12 bg-slate-900 border border-slate-700 rounded px-1 text-center disabled:opacity-50"
+             hx-post="/partial/random/step2_table" hx-target="#step2-table-wrap" hx-swap="outerHTML"
+             hx-include="#step2-form" hx-trigger="change delay:300ms">
+      <span>%</span>
+    </div>
+  </section>
+
+  <hr class="border-slate-700">
+
+  <!-- 3. 형식별 보기 -->
+  <section class="space-y-2">
+    <label class="flex items-center gap-1 font-semibold text-slate-200">
+      <input type="checkbox" name="view_type" value="1"
+             {% if fs.view_type %}checked{% endif %}
+             class="accent-blue-500"
+             {{ hx_common|safe }}>
+      형식별 보기
+    </label>
+    <div class="flex gap-3 pl-5 text-slate-300">
+      {% for code, label in TYPE_LABELS.items() %}
+      <label class="flex items-center gap-1">
+        <input type="checkbox" name="types" value="{{ code }}"
+               {% if code in fs.active_types %}checked{% endif %}
+               class="accent-blue-500"
+               {{ hx_common|safe }}>
+        {{ label }}
+      </label>
+      {% endfor %}
+    </div>
+  </section>
+
+  <hr class="border-slate-700">
+
+  <!-- 4. 문항선호도 -->
+  <section class="space-y-2">
+    <label class="flex items-center gap-1 font-semibold text-slate-200">
+      <input type="checkbox" name="pref_filter_on" value="1"
+             {% if fs.pref_filter_on %}checked{% endif %}
+             class="accent-blue-500"
+             {{ hx_common|safe }}>
+      문항선호도
+    </label>
+    <div class="flex gap-3 pl-5 text-slate-300">
+      {% for code, label in ALL_PREFS %}
+      <label class="flex items-center gap-1">
+        <input type="checkbox" name="prefs" value="{{ code }}"
+               {% if code in fs.active_prefs %}checked{% endif %}
+               class="accent-blue-500"
+               {{ hx_common|safe }}>
+        {{ label }}
+      </label>
+      {% endfor %}
+    </div>
+    <div class="flex gap-3 pl-5 text-slate-400 text-xs">
+      <label class="flex items-center gap-1">
+        <input type="radio" name="pref_scope" value="mine"
+               {% if fs.pref_scope == 'mine' %}checked{% endif %}
+               class="accent-blue-500" {{ hx_common|safe }}>
+        내 것만
+      </label>
+      <label class="flex items-center gap-1">
+        <input type="radio" name="pref_scope" value="all"
+               {% if fs.pref_scope == 'all' %}checked{% endif %}
+               class="accent-blue-500" {{ hx_common|safe }}>
+        남의 것도
+      </label>
+    </div>
+  </section>
+
+  <hr class="border-slate-700">
+
+  <!-- 5. 최신기출 우선선택 (년도 필터 위) -->
+  <section class="space-y-1">
+    <label class="flex items-center gap-1 font-semibold text-slate-200">
+      <input type="checkbox" name="recent_first" value="1"
+             {% if fs.recent_first %}checked{% endif %}
+             class="accent-blue-500"
+             {{ hx_common|safe }}>
+      최신기출 우선선택
+    </label>
+    <div class="text-xs text-slate-500 pl-5">체크 시 최신 년도부터 우선 추첨됩니다.</div>
+  </section>
+
+  <hr class="border-slate-700">
+
+  <!-- 6. 년도 필터 -->
+  <section class="space-y-2">
+    <label class="flex items-center gap-1 font-semibold text-slate-200">
+      <input type="checkbox" name="year_filter_on" value="1"
+             {% if fs.year_filter_on %}checked{% endif %}
+             class="accent-blue-500"
+             {{ hx_common|safe }}>
+      년도 필터
+    </label>
+    <div class="flex gap-3 pl-5 text-slate-300 text-xs">
+      <label class="flex items-center gap-1">
+        <input type="radio" name="year_mode" value="exclude"
+               {% if fs.year_mode == 'exclude' %}checked{% endif %}
+               class="accent-blue-500" {{ hx_common|safe }}>
+        제외
+      </label>
+      <label class="flex items-center gap-1">
+        <input type="radio" name="year_mode" value="include"
+               {% if fs.year_mode == 'include' %}checked{% endif %}
+               class="accent-blue-500" {{ hx_common|safe }}>
+        포함
+      </label>
+    </div>
+    <div class="pl-5">
+      <select name="years" multiple size="4"
+              class="w-full bg-slate-900 border border-slate-700 rounded text-xs"
+              {{ hx_common|safe }}>
+        {% for y in ALL_YEARS %}
+        <option value="{{ y }}" {% if y in fs.active_years %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+      <div class="text-xs text-slate-500 mt-1">Ctrl/Cmd+클릭으로 다중 선택</div>
+    </div>
+  </section>
+
+  <hr class="border-slate-700">
+
+  <!-- 7. 출제 제외 옵션 -->
+  <section class="space-y-2">
+    <div class="font-semibold text-slate-200">출제 제외 옵션</div>
+    <label class="flex items-center gap-1 pl-5 text-slate-300">
+      <input type="checkbox" name="include_excluded" value="1"
+             {% if fs.include_excluded %}checked{% endif %}
+             class="accent-blue-500"
+             {{ hx_common|safe }}>
+      <span>제외설정된 문제도 출제하기</span>
+    </label>
+    <div class="pl-5">
+      <button type="button"
+              hx-get="/partial/random/exclusion_dialog"
+              hx-target="#exclusion-dialog-host"
+              hx-swap="innerHTML"
+              class="bg-amber-700 hover:bg-amber-600 rounded px-3 py-1 text-xs font-semibold">
+        📋 제외설정 보기
+      </button>
+      {% if fs.oneshot_excluded_count and fs.oneshot_excluded_count > 0 %}
+      <span class="text-xs text-amber-300 ml-2">
+        현재 {{ fs.oneshot_excluded_test_count }}개 시험지 / {{ fs.oneshot_excluded_count }}문항 제외 중
+      </span>
+      {% endif %}
+    </div>
+  </section>
+
+  <hr class="border-slate-700">
+
+  <!-- 7. 문항 배분 -->
+  <section class="space-y-2">
+    <div class="font-semibold text-slate-200">문항 배분</div>
+    <div class="flex items-center gap-2 pl-5">
+      <span class="text-slate-300 text-xs">총 문항</span>
+      <input type="number" id="alloc-total-input" value="30" min="1" max="200"
+             class="w-16 bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-center text-sm focus:border-blue-500 outline-none">
+      <button type="button" onclick="window.distributeEvenly && window.distributeEvenly()"
+              class="text-xs bg-blue-700 hover:bg-blue-600 rounded px-2 py-0.5">균등</button>
+      <button type="button" onclick="window.distributeRatio && window.distributeRatio()"
+              class="text-xs bg-indigo-700 hover:bg-indigo-600 rounded px-2 py-0.5">비율</button>
+    </div>
+  </section>
+
+  <hr class="border-slate-700">
+
+  <!-- 8. 상세 필터 (토글) — 로컬 _toggle_detail_filter (main_gui.py:2895) 동등.
+       <details> 표준 + toggle 이벤트로 hidden input 동기화. -->
+  <section class="space-y-2">
+    <details id="detail-filter-section" class="group" {% if fs.detail_open %}open{% endif %}>
+      <summary class="cursor-pointer select-none font-semibold text-indigo-300 hover:text-indigo-200 list-none">
+        <span class="inline-block group-open:hidden">▶</span><span class="hidden group-open:inline-block">▼</span>
+        상세 필터
+      </summary>
+      <input type="hidden" id="detail-filter-open-marker" name="detail_open" value="{% if fs.detail_open %}1{% endif %}">
+
+      <div class="space-y-2 mt-2">
+
+      <!-- 8-1. 학교 옵션 (로컬 _on_school_option_toggle main_gui.py:2926 동등) -->
+      <section class="space-y-1 mt-2">
+        <label class="flex items-center gap-1 font-semibold text-slate-200">
+          <input type="checkbox" name="school_option_on" value="1" data-opt-toggle="school-option-body"
+                 {% if fs.school_option_on %}checked{% endif %}
+                 class="accent-blue-500" {{ hx_common|safe }}>
+          학교 옵션
+        </label>
+        <div id="school-option-body" class="pl-5 space-y-2 {% if not fs.school_option_on %}hidden{% endif %}">
+          <div class="flex gap-1">
+            <input id="school-search-input" type="text" placeholder="학교명 (입력 중 자동검색)"
+                   class="flex-1 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs focus:border-blue-500 outline-none"
+                   onkeydown="if(event.key==='Enter'){event.preventDefault();var v=this.value.trim();if(v){window.addSchoolTag&&window.addSchoolTag(v);this.value='';var r=document.getElementById('school-search-results');if(r)r.innerHTML='';}}"
+                   hx-get="/partial/random/school_search"
+                   hx-trigger="keyup changed delay:300ms, search"
+                   hx-target="#school-search-results"
+                   hx-vals='js:{q: document.getElementById("school-search-input").value}'>
+            <button type="button"
+                    onclick="var i=document.getElementById('school-search-input');var v=i.value.trim();if(v){window.addSchoolTag&&window.addSchoolTag(v);i.value='';var r=document.getElementById('school-search-results');if(r)r.innerHTML='';}"
+                    title="입력한 학교명 그대로 추가 (또는 아래 검색 결과 클릭)"
+                    class="text-xs bg-slate-700 hover:bg-slate-600 rounded px-2">추가</button>
+          </div>
+          <div id="school-search-results"></div>
+          <div id="selected-school-tags" class="grid grid-cols-2 gap-1">
+            {% for s in fs.active_schools %}
+            <span class="flex items-center justify-between gap-1 bg-blue-900/50 border border-blue-700 rounded px-2 py-0.5 text-xs">
+              <input type="hidden" name="schools" value="{{ s }}">
+              <span class="truncate">{{ s }}</span>
+              <button type="button" class="text-rose-300 hover:text-rose-200"
+                      onclick="window.removeSchoolTag && window.removeSchoolTag({{ s|tojson }})">×</button>
+            </span>
+            {% endfor %}
+          </div>
+          <div class="text-xs text-slate-500">최대 5개</div>
+        </div>
+      </section>
+
+      <!-- 8-2. 모의고사 브랜드 -->
+      <section class="space-y-1 mt-2">
+        <label class="flex items-center gap-1 font-semibold text-slate-200">
+          <input type="checkbox" name="brand_option_on" value="1" data-opt-toggle="brand-option-body"
+                 {% if fs.brand_option_on %}checked{% endif %}
+                 class="accent-blue-500" {{ hx_common|safe }}>
+          모의고사 브랜드
+        </label>
+        <div id="brand-option-body" class="pl-5 space-y-2 {% if not fs.brand_option_on %}hidden{% endif %}">
+          <div class="flex gap-1">
+            <input id="brand-search-input" type="text" placeholder="브랜드/키워드 (예: 비상)"
+                   class="flex-1 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs focus:border-blue-500 outline-none"
+                   onkeydown="if(event.key==='Enter'){event.preventDefault();window.addBrandTag&&window.addBrandTag(this.value);this.value='';}">
+            <button type="button"
+                    onclick="var i=document.getElementById('brand-search-input');window.addBrandTag&&window.addBrandTag(i.value);i.value='';"
+                    class="text-xs bg-slate-700 hover:bg-slate-600 rounded px-2">추가</button>
+          </div>
+          <div id="selected-brand-tags" class="grid grid-cols-2 gap-1">
+            {% for b in fs.active_brands %}
+            <span class="flex items-center justify-between gap-1 bg-amber-900/50 border border-amber-700 rounded px-2 py-0.5 text-xs">
+              <input type="hidden" name="brands" value="{{ b }}">
+              <span class="truncate">{{ b }}</span>
+              <button type="button" class="text-rose-300 hover:text-rose-200"
+                      onclick="window.removeBrandTag && window.removeBrandTag({{ b|tojson }})">×</button>
+            </span>
+            {% endfor %}
+          </div>
+        </div>
+      </section>
+
+      <!-- 8-3. 문항번호 -->
+      <section class="space-y-1 mt-2">
+        <label class="flex items-center gap-1 font-semibold text-slate-200">
+          <input type="checkbox" name="pnum_option_on" value="1" data-opt-toggle="pnum-option-body"
+                 {% if fs.pnum_option_on %}checked{% endif %}
+                 class="accent-blue-500" {{ hx_common|safe }}>
+          문항번호
+        </label>
+        <div id="pnum-option-body" class="pl-5 {% if not fs.pnum_option_on %}hidden{% endif %}">
+          <input type="text" name="pnum_text" value="{{ fs.pnum_text or '' }}"
+                 placeholder="예: 30, 45, 46"
+                 class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs focus:border-blue-500 outline-none"
+                 hx-post="/partial/random/step2_table"
+                 hx-target="#step2-table-wrap" hx-swap="outerHTML"
+                 hx-include="#step2-form" hx-trigger="change delay:400ms">
+          <div class="text-xs text-slate-500 mt-1">콤마 또는 공백으로 구분</div>
+        </div>
+      </section>
+      </div>{# /space-y-2 #}
+    </details>
+  </section>
+</aside>
+
+<script>
+  // 상세 필터: <details> open ↔ hidden input(detail_open) 동기화
+  (function() {
+    var d = document.getElementById('detail-filter-section');
+    var o = document.getElementById('detail-filter-open-marker');
+    if (d && o) {
+      d.addEventListener('toggle', function() {
+        o.value = d.open ? '1' : '';
+      });
+    }
+    // 학교/브랜드/문항번호 체크박스 → 하위 영역 show/hide (로컬 _on_*_toggle 동등)
+    document.querySelectorAll('input[data-opt-toggle]').forEach(function(cb) {
+      var areaId = cb.getAttribute('data-opt-toggle');
+      var area = document.getElementById(areaId);
+      if (!area) return;
+      cb.addEventListener('change', function() {
+        area.classList.toggle('hidden', !cb.checked);
+      });
+    });
+
+    // 자식 체크박스가 모두 해제되면 마스터 자동 OFF (필터 미적용으로 떨어져 0건 sticky 방지).
+    // sources / prefs / difficulties / types 4개 그룹에 동일 적용.
+    // capture phase 로 등록 — htmx 가 form 직렬화하기 전에 마스터 상태 변경.
+    if (!window.__autoOffMasterInstalled) {
+      window.__autoOffMasterInstalled = true;
+      var GROUPS = [
+        { child: 'sources',      master: 'source_filter_on' },
+        { child: 'prefs',        master: 'pref_filter_on' },
+        { child: 'difficulties', master: 'view_level' },
+        { child: 'types',        master: 'view_type' },
+      ];
+      document.addEventListener('change', function(e) {
+        if (!e.target || e.target.type !== 'checkbox') return;
+        for (var i = 0; i < GROUPS.length; i++) {
+          var g = GROUPS[i];
+          if (e.target.name !== g.child) continue;
+          var all = document.querySelectorAll('input[name="' + g.child + '"]');
+          var anyChecked = false;
+          for (var k = 0; k < all.length; k++) { if (all[k].checked) { anyChecked = true; break; } }
+          if (!anyChecked) {
+            var master = document.querySelector('input[name="' + g.master + '"]');
+            if (master && master.checked) master.checked = false;
+          }
+          break;
+        }
+      }, true);
+    }
+  })();
+</script>

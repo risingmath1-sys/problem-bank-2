@@ -1,0 +1,242 @@
+{# 시험지 목록 — 복수 선택 지원 (로컬 main_gui.py: extended selection 동등) #}
+{# 상태 보존용 hidden 데이터 (JS가 일괄 작업 시 읽음) #}
+<input type="hidden" id="lib-tests-state-folder" value="{{ folder_id }}">
+<input type="hidden" id="lib-tests-state-sort"   value="{{ sort }}">
+
+<div class="mb-2">
+  <input id="lib-tests-search" type="search" name="q" value="{{ q or '' }}"
+         placeholder="시험지 검색 (제목·단원)"
+         hx-get="/partial/library/tests"
+         hx-include="this"
+         hx-vals='{"folder_id": "{{ folder_id }}", "sort": "{{ sort }}"}'
+         hx-trigger="keyup changed delay:300ms, search"
+         hx-target="#lib-tests" hx-swap="innerHTML"
+         hx-preserve="true"
+         class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm focus:border-blue-500 outline-none">
+</div>
+
+{% if flash %}
+{# 일괄 작업 결과 flash #}
+{% set lvl_cls = {
+  'success': 'bg-emerald-900/50 border-emerald-700 text-emerald-200',
+  'warn':    'bg-amber-900/50 border-amber-700 text-amber-200',
+  'error':   'bg-rose-900/50 border-rose-700 text-rose-200'
+} %}
+<div class="mb-2 px-2 py-1 rounded border text-xs {{ lvl_cls.get(flash.level, 'bg-slate-900 border-slate-700 text-slate-200') }}">
+  {{ flash.msg }}
+</div>
+{% endif %}
+
+{% if not tests %}
+  <div class="text-slate-500 text-sm">{% if q %}"{{ q }}"에 해당하는 시험지가 없습니다.{% else %}이 폴더에 시험지가 없습니다.{% endif %}</div>
+{% else %}
+
+{# ── 헤더: 정렬 + 전체 선택 ─────────────────────────────────── #}
+<div class="flex items-center justify-between mb-2 gap-2">
+  <label class="flex items-center gap-1 text-xs text-slate-300 cursor-pointer">
+    <input type="checkbox" id="lib-cb-all" onchange="libToggleAll(this)"
+           class="rounded border-slate-600 bg-slate-900">
+    <span class="text-slate-400">{{ tests|length }}개{% if q %} (검색: "{{ q }}"){% endif %}</span>
+  </label>
+  <div class="flex gap-1 text-xs">
+    <a href="#"
+       hx-get="/partial/library/tests?folder_id={{ folder_id }}&sort=created{% if q %}&q={{ q|urlencode }}{% endif %}"
+       hx-target="#lib-tests" hx-swap="innerHTML"
+       class="px-2 py-0.5 rounded {% if sort == 'created' %}bg-blue-600{% else %}bg-slate-700 hover:bg-slate-600{% endif %}">최신순</a>
+    <a href="#"
+       hx-get="/partial/library/tests?folder_id={{ folder_id }}&sort=title{% if q %}&q={{ q|urlencode }}{% endif %}"
+       hx-target="#lib-tests" hx-swap="innerHTML"
+       class="px-2 py-0.5 rounded {% if sort == 'title' %}bg-blue-600{% else %}bg-slate-700 hover:bg-slate-600{% endif %}">이름순</a>
+  </div>
+</div>
+
+{# ── 일괄 작업 툴바 (선택 시에만 표시) ─────────────────────────────────── #}
+<div id="lib-bulk-bar" class="hidden mb-2 bg-slate-900/80 border border-blue-600 rounded p-2 space-y-2">
+  <div class="flex items-center justify-between gap-2">
+    <span class="text-xs text-blue-300"><span id="lib-bulk-count">0</span>개 선택</span>
+    <div class="flex gap-1">
+      <button type="button" onclick="libBulkDelete()" title="선택한 시험지 일괄 삭제 (복구 불가)"
+              class="text-xs px-2 py-1 rounded bg-rose-600 hover:bg-rose-500 text-white">🗑 삭제</button>
+      <button type="button" onclick="libBulkPanelToggle('move')" title="선택한 시험지 일괄 이동"
+              class="text-xs px-2 py-1 rounded bg-orange-600 hover:bg-orange-500 text-white">📁 이동</button>
+      <button type="button" onclick="libBulkPanelToggle('dup')" title="선택한 시험지 일괄 복사"
+              class="text-xs px-2 py-1 rounded bg-teal-600 hover:bg-teal-500 text-white">⎘ 복사</button>
+      <button type="button" onclick="libToggleAll(false)" title="선택 해제"
+              class="text-xs px-2 py-1 rounded bg-slate-600 hover:bg-slate-500 text-white">✕ 해제</button>
+    </div>
+  </div>
+  {# 일괄 이동 패널 #}
+  <div id="lib-bulk-panel-move" class="hidden">
+    <div class="flex gap-1 items-center">
+      <span class="text-xs text-orange-300 shrink-0">📁 이동 →</span>
+      <select id="lib-bulk-move-folder"
+              class="flex-1 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm">
+        <option value="root">📂 루트 (최상위)</option>
+        {% for f in folders or [] %}
+        <option value="{{ f.id }}">📁 {{ f.name }}</option>
+        {% endfor %}
+      </select>
+      <button type="button" onclick="libBulkMove()"
+              class="text-xs px-3 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white">적용</button>
+    </div>
+  </div>
+  {# 일괄 복사 패널 #}
+  <div id="lib-bulk-panel-dup" class="hidden">
+    <div class="flex gap-1 items-center">
+      <span class="text-xs text-teal-300 shrink-0">⎘ 복사 →</span>
+      <select id="lib-bulk-dup-folder"
+              class="flex-1 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm">
+        <option value="root">📂 루트 (최상위)</option>
+        {% for f in folders or [] %}
+        <option value="{{ f.id }}">📁 {{ f.name }}</option>
+        {% endfor %}
+      </select>
+      <button type="button" onclick="libBulkDuplicate()"
+              class="text-xs px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white">적용</button>
+    </div>
+  </div>
+</div>
+
+{# ── 시험지 카드 목록 ─────────────────────────────────── #}
+<ul class="space-y-1 max-h-[600px] overflow-y-auto pr-1" id="lib-tests-list">
+  {% for t in tests %}
+  <li class="flex items-stretch gap-1 bg-slate-900 hover:bg-slate-700/60 border border-slate-700 rounded transition">
+    <label class="flex items-center px-2 cursor-pointer hover:bg-slate-700/40 rounded-l">
+      <input type="checkbox" class="lib-test-cb rounded border-slate-600 bg-slate-900"
+             value="{{ t.id }}" onchange="libUpdateBulkBar()">
+    </label>
+    <button type="button"
+            hx-get="/partial/library/test/{{ t.id }}/preview"
+            hx-target="#lib-preview"
+            hx-swap="innerHTML"
+            class="flex-1 text-left px-2 py-2 text-sm">
+      <div class="font-medium truncate">{{ t.title or '(제목 없음)' }}</div>
+      <div class="text-xs text-slate-400 truncate">
+        {% if t.unit_summary %}📚 {{ t.unit_summary }}{% endif %}
+      </div>
+      <div class="text-xs text-slate-500">
+        <span class="text-blue-400">{{ t._count }}문항</span>
+        {% if t.created_at %} · {{ t.created_at[:16] }}{% endif %}
+      </div>
+    </button>
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+<script>
+(function(){
+  if (window.__libTestsBulkInstalled) return;
+  window.__libTestsBulkInstalled = true;
+
+  function _state() {
+    return {
+      folder_id: document.getElementById('lib-tests-state-folder')?.value || 'root',
+      sort:      document.getElementById('lib-tests-state-sort')?.value || 'created',
+      q:         document.getElementById('lib-tests-search')?.value || '',
+    };
+  }
+
+  function _selectedIds() {
+    return Array.from(document.querySelectorAll('.lib-test-cb:checked')).map(c => c.value);
+  }
+
+  // 카운터 갱신 + 툴바 토글
+  window.libUpdateBulkBar = function() {
+    const cnt = _selectedIds().length;
+    const bar = document.getElementById('lib-bulk-bar');
+    const lbl = document.getElementById('lib-bulk-count');
+    if (lbl) lbl.textContent = cnt;
+    if (bar) bar.classList.toggle('hidden', cnt === 0);
+    // 패널 닫기
+    if (cnt === 0) {
+      document.getElementById('lib-bulk-panel-move')?.classList.add('hidden');
+      document.getElementById('lib-bulk-panel-dup')?.classList.add('hidden');
+    }
+    // 전체 선택 체크박스 동기화
+    const all = document.getElementById('lib-cb-all');
+    const total = document.querySelectorAll('.lib-test-cb').length;
+    if (all && total > 0) {
+      all.checked = (cnt === total);
+      all.indeterminate = (cnt > 0 && cnt < total);
+    }
+  };
+
+  // 전체 선택/해제 (인자: checkbox 엘리먼트 또는 boolean)
+  window.libToggleAll = function(target) {
+    let on;
+    if (typeof target === 'boolean') on = target;
+    else if (target && 'checked' in target) on = target.checked;
+    else on = false;
+    document.querySelectorAll('.lib-test-cb').forEach(c => { c.checked = on; });
+    libUpdateBulkBar();
+  };
+
+  // 패널 토글 (move/dup)
+  window.libBulkPanelToggle = function(kind) {
+    const panel = document.getElementById('lib-bulk-panel-' + kind);
+    const other = document.getElementById('lib-bulk-panel-' + (kind === 'move' ? 'dup' : 'move'));
+    if (other) other.classList.add('hidden');
+    if (panel) panel.classList.toggle('hidden');
+  };
+
+  // 일괄 삭제
+  window.libBulkDelete = async function() {
+    const ids = _selectedIds();
+    if (!ids.length) return;
+    if (!confirm(`선택한 ${ids.length}개 시험지를 삭제할까요?\n(복구 불가)`)) return;
+    const fd = new FormData();
+    ids.forEach(id => fd.append('test_ids', id));
+    const s = _state();
+    fd.append('folder_id', s.folder_id);
+    fd.append('sort', s.sort);
+    fd.append('q', s.q);
+    const r = await fetch('/api/library/tests/bulk_delete', {
+      method: 'POST', body: fd, credentials: 'same-origin',
+    });
+    if (!r.ok) { alert('일괄 삭제 실패'); return; }
+    document.getElementById('lib-tests').innerHTML = await r.text();
+    htmx.process(document.getElementById('lib-tests'));
+  };
+
+  // 일괄 이동
+  window.libBulkMove = async function() {
+    const ids = _selectedIds();
+    if (!ids.length) return;
+    const tgt = document.getElementById('lib-bulk-move-folder')?.value || 'root';
+    const fd = new FormData();
+    ids.forEach(id => fd.append('test_ids', id));
+    fd.append('target_folder_id', tgt);
+    const s = _state();
+    fd.append('folder_id', s.folder_id);
+    fd.append('sort', s.sort);
+    fd.append('q', s.q);
+    const r = await fetch('/api/library/tests/bulk_move', {
+      method: 'POST', body: fd, credentials: 'same-origin',
+    });
+    if (!r.ok) { alert('일괄 이동 실패'); return; }
+    document.getElementById('lib-tests').innerHTML = await r.text();
+    htmx.process(document.getElementById('lib-tests'));
+  };
+
+  // 일괄 복사
+  window.libBulkDuplicate = async function() {
+    const ids = _selectedIds();
+    if (!ids.length) return;
+    const tgt = document.getElementById('lib-bulk-dup-folder')?.value || 'root';
+    const fd = new FormData();
+    ids.forEach(id => fd.append('test_ids', id));
+    fd.append('target_folder_id', tgt);
+    const s = _state();
+    fd.append('folder_id', s.folder_id);
+    fd.append('sort', s.sort);
+    fd.append('q', s.q);
+    const r = await fetch('/api/library/tests/bulk_duplicate', {
+      method: 'POST', body: fd, credentials: 'same-origin',
+    });
+    if (!r.ok) { alert('일괄 복사 실패'); return; }
+    document.getElementById('lib-tests').innerHTML = await r.text();
+    htmx.process(document.getElementById('lib-tests'));
+  };
+})();
+</script>

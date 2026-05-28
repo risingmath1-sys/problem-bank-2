@@ -1,0 +1,77 @@
+{#
+  랜덤출제 Step 1 — 단원 선택 트리 (4-level: 카테고리 → 과목 → 대단원 → 중단원)
+  로컬 main_gui._refresh_unit_tree 와 동일 구조. 체크박스 상호배타는 클라 JS 로 처리.
+
+  컨텍스트:
+    categories: [
+      { name: "고등수학", subjects: [
+        { name: "공통수학1 (2022개정)", total: 1234, large_units: [
+          { code: "A", name: "다항식", total: 234, version: "2022", medium_units: [
+            { code: "A1", name: "다항식의 연산", count: 80 }
+          ]}
+        ]}
+      ]}
+    ]
+#}
+<div class="border border-slate-700 rounded-xl overflow-hidden bg-slate-900">
+  <div class="grid grid-cols-[1fr_100px] bg-slate-800 border-b border-slate-700 px-4 py-2 text-xs font-semibold text-slate-300">
+    <div>원하는 단원을 체크하세요~</div>
+    <div class="text-center">문항수</div>
+  </div>
+
+  <div class="divide-y divide-slate-800">
+    {% for cat in categories %}
+    <details class="group" open>
+      <summary class="grid grid-cols-[1fr_100px] px-4 py-2 cursor-pointer hover:bg-slate-800/50 select-none">
+        <span class="text-blue-400 font-bold">▾ {{ cat.name }}</span>
+        <span></span>
+      </summary>
+
+      {% for subj in cat.subjects %}
+      <details class="group/subj border-t border-slate-800/50">
+        <summary class="grid grid-cols-[1fr_100px] pl-8 pr-4 py-1.5 cursor-pointer hover:bg-slate-800/50 select-none text-slate-200">
+          <span><span class="text-slate-500 group-open/subj:hidden">▸</span><span class="text-slate-500 hidden group-open/subj:inline">▾</span> {{ subj.name }}</span>
+          <span class="text-center text-slate-400 text-sm">{{ "{:,}".format(subj.total) }}</span>
+        </summary>
+
+        {% for lu in subj.large_units %}
+        <details class="group/lu border-t border-slate-800/30">
+          <summary class="grid grid-cols-[1fr_100px] pl-12 pr-4 py-1.5 cursor-pointer hover:bg-slate-800/40 select-none text-slate-200">
+            <span class="flex items-center gap-2">
+              <span class="text-slate-600 text-xs"><span class="group-open/lu:hidden">▸</span><span class="hidden group-open/lu:inline">▾</span></span>
+              <input type="checkbox"
+                     name="units"
+                     value="large:{{ lu.code }}:{{ lu.version }}"
+                     class="unit-checkbox accent-blue-500"
+                     data-level="large"
+                     data-code="{{ lu.code }}"
+                     data-version="{{ lu.version }}"
+                     onclick="event.stopPropagation()">
+              <span>{{ lu.name }}</span>
+            </span>
+            <span class="text-center text-slate-400 text-sm">{{ "{:,}".format(lu.total) }}</span>
+          </summary>
+
+          {% for mu in lu.medium_units %}
+          <label class="grid grid-cols-[1fr_100px] pl-20 pr-4 py-1 cursor-pointer hover:bg-slate-800/30 select-none text-slate-300 text-sm">
+            <span class="flex items-center gap-2">
+              <input type="checkbox"
+                     name="units"
+                     value="medium:{{ mu.code }}:{{ lu.version }}"
+                     class="unit-checkbox accent-blue-500"
+                     data-level="medium"
+                     data-code="{{ mu.code }}"
+                     data-version="{{ lu.version }}">
+              <span>{{ mu.name }}</span>
+            </span>
+            <span class="text-center text-slate-500">{{ "{:,}".format(mu.count) }}</span>
+          </label>
+          {% endfor %}
+        </details>
+        {% endfor %}
+      </details>
+      {% endfor %}
+    </details>
+    {% endfor %}
+  </div>
+</div>

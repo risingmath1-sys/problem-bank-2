@@ -1,0 +1,46 @@
+{#
+  Step 2 좌측 테이블 — 단원별 (수준/형식 분할 가능) 행 + 가능 카운트 + 수량 입력.
+  로컬 _refresh_step_2_list (main_gui.py:3196) 의 1:1 포팅. R-1b 단계에서는
+  수준/형식 분할 OFF (1 단원당 1 행) 만 구현. R-2 이후 우측 메뉴와 함께 확장.
+
+  컨텍스트:
+    rows: [
+      { key: "U-A1-2022-_-_", unit_label: "다항식의 연산", is_large: false,
+        level_label: "전체", type_label: "전체", avail: 829 }
+    ]
+    total_avail: 합계 (전체 unit total)
+#}
+<div id="step2-table-wrap" class="border border-slate-700 rounded-xl overflow-hidden bg-slate-900">
+  <div class="grid grid-cols-[1fr_80px_80px_70px_90px] bg-slate-800 border-b border-slate-700 px-3 py-2 text-xs font-semibold text-slate-300 text-center">
+    <div class="text-left">단원명</div>
+    <div>수준</div>
+    <div>형식</div>
+    <div>가능</div>
+    <div>출제</div>
+  </div>
+  <div id="step2-rows" class="divide-y divide-slate-800/60">
+    {% for r in rows %}
+    <div class="grid grid-cols-[1fr_80px_80px_70px_90px] px-3 py-1.5 text-sm items-center hover:bg-slate-800/30">
+      <div class="text-slate-200 truncate">
+        {% if r.is_large %}<span class="text-blue-400 font-bold">[대]</span> {% endif %}{{ r.unit_label }}
+      </div>
+      <div class="text-center text-slate-400">{{ r.level_label }}</div>
+      <div class="text-center text-slate-400">{{ r.type_label }}</div>
+      <div class="text-center text-blue-300 font-semibold">{{ "{:,}".format(r.avail) }}</div>
+      <div class="text-center">
+        <input type="number"
+               name="alloc_{{ r.key }}"
+               value="{{ r.initial_qty or '0' }}" min="0" max="{{ r.avail }}"
+               data-avail="{{ r.avail }}"
+               {% if r.disabled %}disabled{% endif %}
+               class="alloc-input w-16 bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-center focus:border-blue-500 outline-none disabled:opacity-40"
+               oninput="window.updateAllocTotal && window.updateAllocTotal()">
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="bg-slate-800/60 border-t border-slate-700 px-3 py-2 text-sm flex justify-between">
+    <span class="text-slate-300">선택 단원 합계 가능 문항</span>
+    <span class="text-blue-300 font-semibold">{{ "{:,}".format(total_avail) }}</span>
+  </div>
+</div>

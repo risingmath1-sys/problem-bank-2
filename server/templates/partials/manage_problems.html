@@ -1,0 +1,53 @@
+{% if not problems %}
+  <div class="text-slate-500 text-sm">
+    {% if view_mode == 'excluded' %}이 파일에 제외된 문제가 없습니다.{% else %}이 파일에 등록된 문제가 없습니다.{% endif %}
+  </div>
+{% else %}
+<div class="space-y-3">
+  <div class="flex items-center justify-between flex-wrap gap-2">
+    <div>
+      <div class="text-sm font-semibold truncate" title="{{ file_name }}">{{ file_name }}</div>
+      <div class="text-xs text-slate-400">{{ problems|length }}문항</div>
+    </div>
+    <div class="flex gap-1 text-xs">
+      <a href="#"
+         hx-get="/partial/manage/problems?file_name={{ file_name|urlencode }}&view_mode=all"
+         hx-target="#manage-problems" hx-swap="innerHTML"
+         class="px-2 py-1 rounded {% if view_mode == 'all' %}bg-blue-600{% else %}bg-slate-700 hover:bg-slate-600{% endif %}">전체</a>
+      <a href="#"
+         hx-get="/partial/manage/problems?file_name={{ file_name|urlencode }}&view_mode=excluded"
+         hx-target="#manage-problems" hx-swap="innerHTML"
+         class="px-2 py-1 rounded {% if view_mode == 'excluded' %}bg-blue-600{% else %}bg-slate-700 hover:bg-slate-600{% endif %}">제외만</a>
+    </div>
+  </div>
+
+  <div hx-get="/partial/manage/unit_stats?file_name={{ file_name|urlencode }}"
+       hx-trigger="load" hx-swap="innerHTML">
+    <div class="text-slate-500 text-xs">단원별 분포 로딩 중…</div>
+  </div>
+
+  <div class="overflow-x-auto max-h-[600px] overflow-y-auto border border-slate-700 rounded">
+    <table class="min-w-full text-xs">
+      <thead class="bg-slate-900 sticky top-0">
+        <tr class="text-slate-400">
+          <th class="px-2 py-1 text-center">#</th>
+          <th class="px-2 py-1 text-left">단원</th>
+          <th class="px-2 py-1 text-center">유형</th>
+          <th class="px-2 py-1 text-center">난이도</th>
+          <th class="px-2 py-1 text-center">상태</th>
+          <th class="px-2 py-1 text-center">선호</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in problems %}
+          {% set pref = pref_map.get(p.id|string) %}
+          {% include "partials/manage_problem_row.html" %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="text-xs text-slate-500">
+    💡 난이도 셀렉트는 즉시 저장됩니다. 제외 버튼은 출제 후보에서 제외/복원합니다.
+  </div>
+</div>
+{% endif %}

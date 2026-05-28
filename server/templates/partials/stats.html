@@ -1,0 +1,28 @@
+{# 소스별 통계 — 로컬 main_gui.py:252-282 동등.
+   5개 박스 (각 색상) + 합계 행. #}
+{% set src_colors = {
+  'NAESIN_A': '#f4700c',
+  'NAESIN_N': '#e85d9a',
+  'SUNEUNG_SPECIAL': '#3a86ff',
+  'SUNEUNG_COMPLETE': '#06c98a',
+  'MOCK_EXAM': '#7c3aed'
+} %}
+<div class="space-y-3">
+  <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+    {% for s in by_source %}
+    <div class="bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-5 text-center">
+      <div class="text-xs text-slate-400">{{ s.label }}</div>
+      <div class="text-3xl font-bold mt-2" style="color: {{ src_colors.get(s.key, '#3a86ff') }};">
+        {{ "{:,}".format(s.count) }}
+      </div>
+      <div class="text-xs text-slate-500 mt-1">문제</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="flex items-baseline justify-end gap-2 px-2">
+    <span class="text-sm text-slate-400">총 등록 문제</span>
+    <span class="text-xl font-bold text-white">{{ "{:,}".format(total) }}</span>
+    <span class="text-sm text-slate-400">문제</span>
+  </div>
+</div>

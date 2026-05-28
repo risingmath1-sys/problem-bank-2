@@ -1,0 +1,79 @@
+{# 단일 문제 행 — 인라인 편집/제외토글/선호도 후 갱신.
+   id 에 대괄호/한글이 들어가 CSS 셀렉터 escape 가 까다로워서
+   data-row-id 속성 셀렉터 사용. #}
+<tr data-row-id="{{ p.id }}" class="border-t border-slate-800 hover:bg-slate-700/40
+    {% if p.is_excluded %}opacity-50 line-through{% endif %}">
+  <td class="px-2 py-1 text-center">{{ p.endnote_index or '' }}</td>
+  <td class="px-2 py-1 text-xs">
+    <details class="group/unit">
+      <summary class="cursor-pointer list-none flex items-center gap-1">
+        <span class="text-slate-300">{{ p.large_unit or '' }}</span>
+        {% if p.middle_unit %}<span class="text-slate-400">&gt; {{ p.middle_unit }}</span>{% endif %}
+        <span class="text-slate-500 opacity-0 group-hover/unit:opacity-100">✎</span>
+      </summary>
+      <form hx-post="/api/manage/meta"
+            hx-target='[data-row-id="{{ p.id }}"]'
+            hx-swap="outerHTML"
+            hx-trigger="change from:select"
+            class="mt-1 inline-block">
+        <input type="hidden" name="problem_id" value="{{ p.id }}">
+        <input type="hidden" name="field" value="unit_code">
+        <input type="hidden" name="file_name" value="{{ p.file_name }}">
+        <input type="hidden" name="unit_name" value="">
+        <select name="value"
+                onchange="this.form.elements['unit_name'].value = this.options[this.selectedIndex].dataset.name || '';"
+                class="bg-slate-900 border border-slate-700 rounded text-xs px-1 py-0.5 max-w-[260px]">
+          <option value="" data-name="">-- 단원 선택 --</option>
+          {% for u in all_units or [] %}
+          <option value="{{ u.code }}" data-name="{{ u.name }}"
+                  {% if p.unit_code == u.code %}selected{% endif %}>{{ u.label }}</option>
+          {% endfor %}
+        </select>
+      </form>
+    </details>
+  </td>
+  <td class="px-2 py-1 text-center text-xs">{{ p.problem_type or '' }}</td>
+  <td class="px-2 py-1 text-center">
+    <select hx-post="/api/manage/meta"
+            hx-target='[data-row-id="{{ p.id }}"]'
+            hx-swap="outerHTML"
+            hx-vals='{"problem_id": {{ p.id|tojson }}, "field": "difficulty", "file_name": {{ p.file_name|tojson }}}'
+            name="value"
+            class="bg-slate-900 border border-slate-700 rounded text-xs px-1 py-0.5 focus:border-blue-500 outline-none">
+      {% for code, label in [('A','최상'),('B','상'),('C','중'),('D','하')] %}
+      <option value="{{ code }}" {% if p.difficulty == code %}selected{% endif %}>{{ code }}({{ label }})</option>
+      {% endfor %}
+    </select>
+  </td>
+  <td class="px-2 py-1 text-center">
+    {% if p.is_excluded %}
+      <button type="button"
+              hx-post="/api/manage/exclusion"
+              hx-target='[data-row-id="{{ p.id }}"]'
+              hx-swap="outerHTML"
+              hx-vals='{"problem_id": {{ p.id|tojson }}, "excluded": "0", "file_name": {{ p.file_name|tojson }}}'
+              class="bg-emerald-700 hover:bg-emerald-600 rounded px-2 py-0.5 text-xs">복원</button>
+    {% else %}
+      <button type="button"
+              hx-post="/api/manage/exclusion"
+              hx-target='[data-row-id="{{ p.id }}"]'
+              hx-swap="outerHTML"
+              hx-vals='{"problem_id": {{ p.id|tojson }}, "excluded": "1", "file_name": {{ p.file_name|tojson }}}'
+              class="bg-yellow-700 hover:bg-yellow-600 rounded px-2 py-0.5 text-xs">제외</button>
+    {% endif %}
+  </td>
+  <td class="px-2 py-1 text-center">
+    <div class="inline-flex gap-0.5">
+      {% set states = [('Good','👍','bg-blue-600'),('Soso','😐','bg-slate-600'),('Bad','👎','bg-red-700')] %}
+      {% for v, icon, cls in states %}
+      <button type="button"
+              hx-post="/api/manage/preference"
+              hx-target='[data-row-id="{{ p.id }}"]'
+              hx-swap="outerHTML"
+              hx-vals='{"problem_id": {{ p.id|tojson }}, "value": "{% if pref == v %}{% else %}{{ v }}{% endif %}", "file_name": {{ p.file_name|tojson }}}'
+              title="{{ v }}{% if pref == v %} (해제){% endif %}"
+              class="{% if pref == v %}{{ cls }}{% else %}bg-slate-800 hover:bg-slate-700{% endif %} rounded w-6 h-6 text-xs">{{ icon }}</button>
+      {% endfor %}
+    </div>
+  </td>
+</tr>

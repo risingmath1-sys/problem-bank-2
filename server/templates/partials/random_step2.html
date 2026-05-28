@@ -1,0 +1,306 @@
+{#
+  Step 2 페이지 셸 — 헤더 + 좌측 테이블 + 우측 메뉴 패널.
+  로컬 _build_step_2_ui (main_gui.py:2500) 의 포팅.
+#}
+<div id="random-root" class="space-y-4">
+  <header class="flex items-center justify-between">
+    <h1 class="text-2xl font-bold">📝 출제조건 지정 및 문항수 입력</h1>
+    <div class="flex items-center gap-2">
+      <button type="button"
+              id="step2-next-btn"
+              hx-post="/api/exam/random_multi"
+              hx-include="#step2-form"
+              hx-target="#random-root"
+              hx-swap="outerHTML"
+              class="bg-blue-600 hover:bg-blue-500 rounded px-5 py-1.5 text-sm font-semibold">
+        다음
+      </button>
+      <button type="button"
+              hx-get="/random"
+              hx-target="#random-root"
+              hx-swap="outerHTML"
+              class="bg-slate-700 hover:bg-slate-600 rounded px-4 py-1.5 text-sm">
+        이전
+      </button>
+      <a href="/" class="bg-slate-700 hover:bg-slate-600 rounded px-4 py-1.5 text-sm">닫기</a>
+    </div>
+  </header>
+
+  <form id="step2-form" class="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4">
+    {% for u in units_payload %}
+    <input type="hidden" name="units" value="{{ u }}">
+    {% endfor %}
+
+    <section class="space-y-3">
+      <div class="flex justify-end">
+        <span class="bg-slate-700 border border-slate-600 text-amber-300 rounded-lg px-3 py-1.5 text-sm font-semibold whitespace-nowrap">
+          현재 <b class="text-amber-200">{{ existing_count or 0 }}</b>문항
+        </span>
+      </div>
+      {# step2-table-wrap id 는 random_step2_table.html 의 wrapper 에서 부여됨 —
+         outerHTML swap 후에도 id 유지되어 다음 hx-post 가 target 을 다시 찾을 수 있음. #}
+      {% include "partials/random_step2_table.html" %}
+      <div class="text-sm text-slate-400 flex flex-wrap items-center gap-x-6 gap-y-2">
+        <span>합계 입력 문항: <span id="alloc-total" class="text-amber-300 font-semibold">0</span> / 200 (최대)</span>
+      </div>
+    </section>
+
+    {% include "partials/random_step2_right.html" %}
+  </form>
+
+  <div id="step3-area"></div>
+
+  <!-- 제외설정 다이얼로그 호스트 (모달) -->
+  <div id="exclusion-dialog-host"></div>
+</div>
+
+<script>
+  // 로컬 _open_exclusion_dialog (main_gui.py:2975) 동등:
+  // 적용 → 다이얼로그 자동 닫힘 + 좌측 step2 테이블 자동 재요청.
+  // exclusion_apply 응답 HX-Trigger 헤더로 이 이벤트들 발생.
+  // "다음" 버튼 클릭 시 — 총 문항 수 0이면 페이지 이동 차단 + 알림.
+  // (서버에 다녀오면 #random-root 가 에러 페이지로 갈아끼워져 뒤로 갈 길이 없음)
+  if (!window._step2NextGuardBound) {
+    window._step2NextGuardBound = true;
+    document.body.addEventListener('htmx:confirm', function (e) {
+      var t = e.target;
+      if (!t || t.id !== 'step2-next-btn') return;
+      var totEl = document.getElementById('alloc-total');
+      var total = parseInt(((totEl ? totEl.textContent : '0') || '0').replace(/,/g, ''), 10) || 0;
+      if (total <= 0) {
+        e.preventDefault();
+        alert('출제 문항 수를 입력해주세요.');
+      }
+    });
+  }
+
+  if (!window._step2RefreshBound) {
+    window._step2RefreshBound = true;
+    document.body.addEventListener('step2Refresh', function() {
+      var form = document.getElementById('step2-form');
+      if (!form) return;
+      var fd = new FormData(form);
+      // step2-table-wrap 가 한 번 swap 되면 id 가 사라지므로 fallback 검색.
+      fetch('/partial/random/step2_table', { method: 'POST', body: fd })
+        .then(function(r) { return r.text(); })
+        .then(function(html) {
+          var wrap = document.getElementById('step2-table-wrap')
+                  || form.querySelector('section > div');
+          if (!wrap) return;
+          wrap.outerHTML = html;
+          var fresh = document.getElementById('step2-table-wrap');
+          if (fresh && window.htmx) window.htmx.process(fresh);
+        })
+        .catch(function(err) { console.error('[step2Refresh] 실패:', err); });
+    });
+    document.body.addEventListener('closeExclDialog', function() {
+      var dlg = document.getElementById('exclusion-dialog');
+      if (dlg) dlg.remove();
+    });
+  }
+
+  // ── 문항선호도 셋팅 localStorage 저장/복원 ─────────────────────
+  // 로컬 settings.json 의 pref_filter_enabled / pref_Good / pref_Soso / pref_Bad / pref_scope
+  // (main_gui.py:106-111, 1430-1857) 동등 — 단 브라우저 localStorage 에 저장.
+  if (!window._prefStorageBound) {
+    window._prefStorageBound = true;
+    var PREF_KEY = 'rb_pref_settings_v1';
+
+    function _loadPrefs() {
+      try { var s = localStorage.getItem(PREF_KEY); return s ? JSON.parse(s) : null; }
+      catch(e) { return null; }
+    }
+    function _savePrefs(p) {
+      try { localStorage.setItem(PREF_KEY, JSON.stringify(p)); } catch(e) {}
+    }
+    function _readCurrentPrefs() {
+      var form = document.getElementById('step2-form');
+      if (!form) return null;
+      var master = form.querySelector('input[name=pref_filter_on]');
+      var prefs = Array.from(form.querySelectorAll('input[name=prefs]:checked')).map(function(c){return c.value;});
+      var scopeRb = form.querySelector('input[name=pref_scope]:checked');
+      return {
+        pref_filter_on: !!(master && master.checked),
+        prefs: prefs,
+        pref_scope: (scopeRb && scopeRb.value) || 'mine',
+      };
+    }
+    function _applyPrefs(p) {
+      if (!p) return false;
+      var form = document.getElementById('step2-form');
+      if (!form) return false;
+      var master = form.querySelector('input[name=pref_filter_on]');
+      if (master) master.checked = !!p.pref_filter_on;
+      form.querySelectorAll('input[name=prefs]').forEach(function(cb) {
+        cb.checked = (p.prefs || []).indexOf(cb.value) !== -1;
+      });
+      form.querySelectorAll('input[name=pref_scope]').forEach(function(rb) {
+        rb.checked = (rb.value === (p.pref_scope || 'mine'));
+      });
+      return true;
+    }
+    function _restorePrefsOnce() {
+      var saved = _loadPrefs();
+      if (!saved) return;
+      if (_applyPrefs(saved)) {
+        // step2 테이블 갱신 (사용자 셋팅 반영된 가능 카운트)
+        document.body.dispatchEvent(new Event('step2Refresh'));
+      }
+    }
+
+    // (1) 첫 진입 시 시도 (step2 가 이미 DOM 에 있는 경우)
+    _restorePrefsOnce();
+
+    // (2) step2 partial 이 새로 swap 될 때마다 시도
+    document.body.addEventListener('htmx:afterSwap', function(e) {
+      var t = e.detail.target;
+      if (!t) return;
+      if (t.id === 'step2-area' || (t.querySelector && t.querySelector('#step2-form'))) {
+        _restorePrefsOnce();
+      }
+    });
+
+    // (3) 사용자가 선호도 필터 토글 시 즉시 저장
+    document.body.addEventListener('change', function(e) {
+      var t = e.target;
+      if (!t || !t.name) return;
+      if (t.name === 'pref_filter_on' || t.name === 'prefs' || t.name === 'pref_scope') {
+        _savePrefs(_readCurrentPrefs());
+      }
+    });
+  }
+
+  window.updateAllocTotal = function () {
+    let sum = 0;
+    document.querySelectorAll('.alloc-input').forEach(el => {
+      const v = parseInt(el.value, 10);
+      if (!isNaN(v) && v > 0) sum += v;
+    });
+    const t = document.getElementById('alloc-total');
+    if (t) t.textContent = sum.toLocaleString();
+  };
+
+  function _readTotalQty() {
+    const inp = document.getElementById('alloc-total-input');
+    if (!inp) return 0;
+    let n = parseInt(inp.value, 10);
+    if (isNaN(n) || n < 1) return 0;
+    if (n > 200) { n = 200; inp.value = '200'; }
+    return n;
+  }
+
+  function _visibleAllocInputs() {
+    return Array.from(document.querySelectorAll('.alloc-input'))
+      .filter(el => !el.disabled);
+  }
+
+  // 로컬 _distribute_evenly 와 동일: total // n + remainder 1씩 앞에서부터.
+  window.distributeEvenly = function () {
+    const total = _readTotalQty();
+    const inputs = _visibleAllocInputs();
+    if (!total || !inputs.length) return;
+    const base = Math.floor(total / inputs.length);
+    const remainder = total % inputs.length;
+    inputs.forEach((el, i) => { el.value = String(base + (i < remainder ? 1 : 0)); });
+    window.updateAllocTotal();
+  };
+
+  // 로컬 _distribute_ratio 와 동일: avail 기준 비율, 잔여는 avail 큰 순서대로.
+  window.distributeRatio = function () {
+    const total = _readTotalQty();
+    const inputs = _visibleAllocInputs();
+    if (!total || !inputs.length) return;
+    const avails = inputs.map(el => parseInt(el.dataset.avail || '0', 10) || 0);
+    const totalAvail = avails.reduce((a, b) => a + b, 0);
+    if (totalAvail === 0) return;
+    const order = avails.map((v, i) => i).sort((a, b) => avails[b] - avails[a]);
+    const allocs = new Array(inputs.length).fill(0);
+    let used = 0;
+    order.forEach(i => {
+      const q = Math.floor(total * avails[i] / totalAvail);
+      allocs[i] = q; used += q;
+    });
+    let rem = total - used;
+    for (let k = 0; k < order.length && rem > 0; k++) {
+      allocs[order[k]] += 1; rem -= 1;
+    }
+    inputs.forEach((el, i) => {
+      const max = parseInt(el.dataset.avail || '0', 10) || 0;
+      el.value = String(Math.min(allocs[i], max));
+    });
+    window.updateAllocTotal();
+  };
+
+  // 테이블이 HTMX 로 swap 된 직후에도 합계 재계산
+  document.body.addEventListener('htmx:afterSwap', function () { window.updateAllocTotal(); });
+
+  // ── R-7 detail filter — school/brand tag 관리 ──
+  function _triggerFormChange() {
+    var form = document.getElementById('step2-form');
+    if (form) htmx.trigger(form, 'change');
+  }
+
+  window.addSchoolTag = function (school) {
+    if (!school) return;
+    var box = document.getElementById('selected-school-tags');
+    if (!box) return;
+    var existing = box.querySelectorAll('input[name="schools"]');
+    if (existing.length >= 5) { alert('학교는 최대 5개까지만 선택할 수 있습니다.'); return; }
+    for (var i = 0; i < existing.length; i++) {
+      if (existing[i].value === school) return;  // 중복
+    }
+    var span = document.createElement('span');
+    span.className = 'flex items-center justify-between gap-1 bg-blue-900/50 border border-blue-700 rounded px-2 py-0.5 text-xs';
+    var hi = document.createElement('input');
+    hi.type = 'hidden'; hi.name = 'schools'; hi.value = school;
+    var label = document.createElement('span'); label.className = 'truncate'; label.textContent = school;
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'text-rose-300 hover:text-rose-200'; btn.textContent = '×';
+    btn.onclick = function () { window.removeSchoolTag(school); };
+    span.appendChild(hi); span.appendChild(label); span.appendChild(btn);
+    box.appendChild(span);
+    _triggerFormChange();
+  };
+
+  window.removeSchoolTag = function (school) {
+    var box = document.getElementById('selected-school-tags');
+    if (!box) return;
+    var inputs = box.querySelectorAll('input[name="schools"]');
+    for (var i = 0; i < inputs.length; i++) {
+      if (inputs[i].value === school) { inputs[i].parentElement.remove(); break; }
+    }
+    _triggerFormChange();
+  };
+
+  window.addBrandTag = function (brand) {
+    brand = (brand || '').trim();
+    if (!brand) return;
+    var box = document.getElementById('selected-brand-tags');
+    if (!box) return;
+    var existing = box.querySelectorAll('input[name="brands"]');
+    for (var i = 0; i < existing.length; i++) {
+      if (existing[i].value === brand) return;
+    }
+    var span = document.createElement('span');
+    span.className = 'flex items-center justify-between gap-1 bg-amber-900/50 border border-amber-700 rounded px-2 py-0.5 text-xs';
+    var hi = document.createElement('input');
+    hi.type = 'hidden'; hi.name = 'brands'; hi.value = brand;
+    var label = document.createElement('span'); label.className = 'truncate'; label.textContent = brand;
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'text-rose-300 hover:text-rose-200'; btn.textContent = '×';
+    btn.onclick = function () { window.removeBrandTag(brand); };
+    span.appendChild(hi); span.appendChild(label); span.appendChild(btn);
+    box.appendChild(span);
+    _triggerFormChange();
+  };
+
+  window.removeBrandTag = function (brand) {
+    var box = document.getElementById('selected-brand-tags');
+    if (!box) return;
+    var inputs = box.querySelectorAll('input[name="brands"]');
+    for (var i = 0; i < inputs.length; i++) {
+      if (inputs[i].value === brand) { inputs[i].parentElement.remove(); break; }
+    }
+    _triggerFormChange();
+  };
+</script>

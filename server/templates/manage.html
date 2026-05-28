@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+{% block title %}문제 관리 — 상승 Solution{% endblock %}
+{% block content %}
+<div class="space-y-4">
+  <h1 class="text-2xl font-bold">⚙️ 문제 관리</h1>
+
+  <!-- 필터 — 2026-05-23: 원본출제 검색 UI 동등 -->
+  <form id="manage-files-form"
+        hx-get="/partial/manage/files"
+        hx-trigger="change delay:200ms, keyup delay:400ms from:input[type=text], load"
+        hx-target="#manage-files"
+        hx-swap="innerHTML"
+        class="bg-slate-800 border border-slate-700 rounded-xl p-4 space-y-3">
+
+    <div>
+      <div class="text-sm font-semibold text-slate-300 mb-2">소스</div>
+      <div id="mng-source-row" class="flex flex-wrap gap-2 text-sm">
+        {% for code, label in sources %}
+        <label class="cursor-pointer">
+          <input type="radio" name="source" value="{{ code }}" class="peer sr-only mng-source-radio"
+                 data-code="{{ code }}"
+                 {% if loop.first %}checked{% endif %}
+                 onchange="window.mngToggleNaesinFields(this.value);">
+          <span class="px-3 py-1 rounded border border-slate-600 peer-checked:bg-blue-600 peer-checked:border-blue-500 hover:bg-slate-700 transition">{{ label }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- 공통 필터 -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">파일명 검색</label>
+        <input type="text" name="search"
+               class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm focus:border-blue-500 outline-none">
+      </div>
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">년도</label>
+        <select name="year"
+                class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm focus:border-blue-500 outline-none">
+          <option value="">전체</option>
+          {% for y in all_years %}
+          <option value="{{ y }}">{{ y }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="mng-naesin-only">
+        <label class="block text-xs text-slate-400 mb-1">학교 (포함)</label>
+        <input type="text" name="school"
+               class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm focus:border-blue-500 outline-none">
+      </div>
+      <div class="mng-naesin-only">
+        <label class="block text-xs text-slate-400 mb-1">단원명 (포함)</label>
+        <input type="text" name="unit_like" placeholder="예: 미분"
+               class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm focus:border-blue-500 outline-none">
+      </div>
+    </div>
+
+    <!-- 내신 전용 필터 -->
+    <div class="mng-naesin-only grid grid-cols-2 md:grid-cols-6 gap-2">
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">학년</label>
+        <select name="grade" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm">
+          <option value=""></option>
+          {% for v in ['고1','고2','고3','중1','중2','중3'] %}<option value="{{ v }}">{{ v }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">학기</label>
+        <select name="semester" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm">
+          <option value=""></option>
+          <option value="1학기">1학기</option>
+          <option value="2학기">2학기</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">시험</label>
+        <select name="exam_type" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm">
+          <option value=""></option>
+          <option value="중간고사">중간고사</option>
+          <option value="기말고사">기말고사</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">교육과정</label>
+        <select name="curriculum" id="mng-curriculum"
+                class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm"
+                onchange="window.mngRefreshSubjects(this.value);">
+          <option value=""></option>
+          {% for c in curriculum_names %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">과목</label>
+        <select name="subject" id="mng-subject"
+                class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm"
+                onchange="window.mngRefreshUnits(this.value);">
+          <option value=""></option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">난이도</label>
+        <select name="diff_level" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm">
+          <option value=""></option>
+          <option value="최상">최상</option>
+          <option value="상">상</option>
+          <option value="중">중</option>
+          <option value="하">하</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- 시험범위 (단원 시작~끝) — 과목 선택 시만 활성 -->
+    <div class="mng-naesin-only grid grid-cols-1 md:grid-cols-2 gap-2">
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">시험범위 시작</label>
+        <select name="unit_start" id="mng-unit-start" disabled
+                class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm disabled:opacity-50">
+          <option value=""></option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">시험범위 끝</label>
+        <select name="unit_end" id="mng-unit-end" disabled
+                class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm disabled:opacity-50">
+          <option value=""></option>
+        </select>
+      </div>
+    </div>
+  </form>
+
+  <script>
+  (function () {
+    const subjectsByCurriculum = {{ curriculums|tojson }};
+
+    window.mngRefreshSubjects = function (curr) {
+      const subj = document.getElementById("mng-subject");
+      if (!subj) return;
+      const list = subjectsByCurriculum[curr] || [];
+      const cur = subj.value;
+      subj.innerHTML = '<option value=""></option>' + list.map(s => `<option value="${s}">${s}</option>`).join("");
+      if (list.includes(cur)) subj.value = cur;
+      window.mngRefreshUnits(subj.value);
+      htmx.trigger("#manage-files-form", "change");
+    };
+
+    window.mngRefreshUnits = async function (subject) {
+      const us = document.getElementById("mng-unit-start");
+      const ue = document.getElementById("mng-unit-end");
+      if (!us || !ue) return;
+      if (!subject) {
+        us.innerHTML = '<option value=""></option>';
+        ue.innerHTML = '<option value=""></option>';
+        us.disabled = true; ue.disabled = true;
+        return;
+      }
+      try {
+        // 원본출제와 동일 endpoint 재사용 (단원 옵션은 동일)
+        const r = await fetch("/partial/original/units_for_subject?subject=" + encodeURIComponent(subject));
+        const html = await r.text();
+        us.innerHTML = html;
+        ue.innerHTML = html;
+        us.disabled = false; ue.disabled = false;
+      } catch (e) { console.error(e); }
+    };
+
+    window.mngToggleNaesinFields = function (sourceCode) {
+      const isNaesin = sourceCode === "NAESIN_A" || sourceCode === "NAESIN_N";
+      document.querySelectorAll(".mng-naesin-only").forEach(el => {
+        el.style.display = isNaesin ? "" : "none";
+      });
+    };
+
+    // 초기화
+    const initSrc = document.querySelector(".mng-source-radio:checked");
+    if (initSrc) window.mngToggleNaesinFields(initSrc.value);
+  })();
+  </script>
+
+  <!-- 좌(파일) / 우(문제) -->
+  <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
+    <div class="lg:col-span-2 bg-slate-800 border border-slate-700 rounded-xl p-4 min-h-[200px] space-y-3">
+      <!-- 일괄 작업 바 -->
+      <form id="bulk-form" class="flex flex-wrap gap-2 text-xs">
+        <button type="button"
+                onclick="document.querySelectorAll('input[name=file_names]').forEach(c=>c.checked=true)"
+                class="bg-slate-700 hover:bg-slate-600 rounded px-2 py-1">전체선택</button>
+        <button type="button"
+                onclick="document.querySelectorAll('input[name=file_names]').forEach(c=>c.checked=false)"
+                class="bg-slate-700 hover:bg-slate-600 rounded px-2 py-1">선택해제</button>
+        <button type="button"
+                hx-post="/api/manage/files/exclude"
+                hx-include="#bulk-form input[name=file_names]:checked"
+                hx-vals='{"excluded": "1"}'
+                hx-target="#bulk-result"
+                hx-swap="innerHTML"
+                hx-confirm="선택한 파일의 모든 문제를 제외하시겠습니까?"
+                class="bg-yellow-600 hover:bg-yellow-500 rounded px-2 py-1">파일별 제외</button>
+        <button type="button"
+                hx-post="/api/manage/files/exclude"
+                hx-include="#bulk-form input[name=file_names]:checked"
+                hx-vals='{"excluded": "0"}'
+                hx-target="#bulk-result"
+                hx-swap="innerHTML"
+                hx-confirm="선택한 파일의 모든 문제를 복원하시겠습니까?"
+                class="bg-emerald-600 hover:bg-emerald-500 rounded px-2 py-1">파일별 복원</button>
+        <button type="button"
+                hx-post="/api/manage/files/delete"
+                hx-include="#bulk-form input[name=file_names]:checked"
+                hx-vals='{"confirm": "DELETE"}'
+                hx-target="#bulk-result"
+                hx-swap="innerHTML"
+                hx-confirm="⚠️ 선택한 파일의 모든 문제가 DB에서 영구 삭제됩니다. 진행하시겠습니까?"
+                class="bg-red-700 hover:bg-red-600 rounded px-2 py-1">DB삭제</button>
+        <button type="button"
+                hx-post="/api/manage/files/diagnose"
+                hx-include="#bulk-form input[name=file_names]:checked"
+                hx-target="#bulk-result"
+                hx-swap="innerHTML"
+                class="bg-cyan-700 hover:bg-cyan-600 rounded px-2 py-1">🔎 파일 진단</button>
+        <button type="button"
+                hx-post="/api/manage/files/reindex"
+                hx-include="#bulk-form input[name=file_names]:checked"
+                hx-target="#bulk-result"
+                hx-swap="innerHTML"
+                hx-confirm="선택한 파일을 재인덱싱하시겠습니까? (HWP 파서 호출)"
+                class="bg-violet-700 hover:bg-violet-600 rounded px-2 py-1">↻ 재인덱싱</button>
+      </form>
+      <div id="bulk-result"></div>
+      <div id="manage-files">
+        <div class="text-slate-500 text-sm">소스를 선택하면 파일 목록이 표시됩니다.</div>
+      </div>
+    </div>
+
+    <div class="lg:col-span-3 bg-slate-800 border border-slate-700 rounded-xl p-4 min-h-[200px]">
+      <div id="manage-problems">
+        <div class="text-slate-500 text-sm">왼쪽에서 파일을 클릭하면 문제 목록이 표시됩니다.</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

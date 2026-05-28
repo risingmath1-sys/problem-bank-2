@@ -1,0 +1,29 @@
+{#
+  랜덤출제 Step 3 — 진행률 + 다운로드 화면.
+  로컬은 step3 = "문제 확인" + step4 = "출제진행" 두 단계로 나뉘지만,
+  서버 MVP 는 사용자 요청대로 "step3 = 진행률 + 다운로드" 단순화.
+  R-8 단계에서 누락 경고 등 추가 예정.
+#}
+<div id="random-root" class="space-y-4">
+  <header class="flex items-center justify-between">
+    <h1 class="text-2xl font-bold">📤 출제 진행 중</h1>
+    <div class="flex gap-2">
+      <button type="button"
+              hx-get="/random"
+              hx-target="#random-root"
+              hx-swap="outerHTML"
+              class="bg-blue-600 hover:bg-blue-500 rounded px-4 py-1.5 text-sm font-semibold">
+        새 출제
+      </button>
+      <a href="/" class="bg-slate-700 hover:bg-slate-600 rounded px-4 py-1.5 text-sm">홈</a>
+    </div>
+  </header>
+
+  {% if skipped_count and skipped_count > 0 %}
+  <div class="bg-amber-900/30 border border-amber-700 text-amber-200 rounded-xl p-3 text-sm">
+    원본 HWP 파일을 찾지 못해 사전 제외된 문제 <b>{{ skipped_count }}건</b>이 있습니다.
+  </div>
+  {% endif %}
+
+  {% include "partials/exam_progress.html" %}
+</div>

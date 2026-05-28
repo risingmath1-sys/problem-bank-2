@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}문제 등록 — 상승 Solution{% endblock %}
+{% block content %}
+<div class="space-y-6">
+  <header class="flex items-center justify-between">
+    <h1 class="text-2xl font-bold">📚 문제 등록 — 소스 선택</h1>
+    <a href="/" class="bg-slate-700 hover:bg-slate-600 rounded px-3 py-1.5 text-sm">홈</a>
+  </header>
+
+  <p class="text-sm text-slate-400">등록할 문제의 출처에 맞는 버튼을 클릭하세요.</p>
+
+  {# 6개 소스 카드 — 로컬 main_gui.py:464-471 동일 색상 #}
+  {% set sources = [
+    ('NAESIN_A',         '📝', '내신기출A',  '(내기왕)',         '#1a4ed8'),
+    ('NAESIN_N',         '📝', '내신기출B',  '(N)',              '#0f766e'),
+    ('SUNEUNG_SPECIAL',  '📖', '수능특강',   '',                 '#b45309'),
+    ('SUNEUNG_COMPLETE', '📖', '수능완성',   '',                 '#7c3aed'),
+    ('MOCK_EXAM',        '🏆', '모의고사',   '',                 '#be185d'),
+    ('TEXTBOOK',         '📗', '일반 문제집', '쎈 / RPM / 고쟁이', '#15803d'),
+  ] %}
+  <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
+    {% for code, icon, line1, line2, color in sources %}
+    <a href="/register/{{ code }}"
+       class="block rounded-xl p-6 text-center transition hover:scale-105"
+       style="background-color: {{ color }};">
+      <div class="text-4xl mb-2">{{ icon }}</div>
+      <div class="text-white text-lg font-bold">{{ line1 }}</div>
+      {% if line2 %}<div class="text-white/80 text-sm mt-1">{{ line2 }}</div>{% endif %}
+    </a>
+    {% endfor %}
+  </div>
+
+  <div class="bg-amber-900/30 border border-amber-700 text-amber-200 rounded-xl p-3 text-sm">
+    ⚠ 인덱싱은 한글 프로그램(HWP COM)을 호출합니다. 서버 PC 의 출제 큐와 직렬화되며,
+    네트워크/충돌을 피하기 위해 admin 의 .exe (데스크탑) 환경에서 수행하는 것을 권장합니다.
+  </div>
+</div>
+{% endblock %}

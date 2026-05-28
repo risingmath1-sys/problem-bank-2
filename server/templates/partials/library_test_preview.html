@@ -1,0 +1,316 @@
+{# 시험지 미리보기 — 로컬 main_gui.py:6315 _lib_show_problem_view 동등 (99% 일치 목표) #}
+{% set level_map = {'A': '최상', 'B': '상', 'C': '중', 'D': '하'} %}
+
+<div class="space-y-3">
+  {# ── 상단: 제목/메타 + 액션 버튼들 ─────────────────────────── #}
+  <div class="flex items-start justify-between gap-2">
+    <div class="min-w-0">
+      <div class="text-sm font-semibold truncate">{{ test.title or '(제목 없음)' }}</div>
+      {% if test.unit_summary %}
+      <div class="text-xs text-slate-400 truncate">📚 {{ test.unit_summary }}</div>
+      {% endif %}
+      <div class="text-xs text-slate-500">
+        {{ test.problems|length }}문항
+        {% if test.created_at %} · 생성 {{ test.created_at[:16] }}{% endif %}
+      </div>
+    </div>
+    <div class="flex gap-1 shrink-0 flex-wrap justify-end">
+      <button type="button" title="문항을 전체 화면으로 보기 (출처/단원이 시원하게 보임)"
+              hx-get="/partial/library/test/{{ test.id }}/full"
+              hx-target="#library-content"
+              hx-swap="innerHTML"
+              class="text-xs px-2 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white font-bold">🔍 문항 보기</button>
+      <button type="button" title="시험지 이름/단원 수정 (로컬: 정보수정 다이얼로그 360x200)"
+              onclick="document.getElementById('lib-info-panel-{{ test.id }}').classList.toggle('hidden')"
+              class="text-xs px-2 py-1 rounded bg-slate-600 hover:bg-slate-500 text-white">✎ 정보수정</button>
+      <button type="button" title="다른 폴더로 이동"
+              onclick="document.getElementById('lib-move-panel-{{ test.id }}').classList.toggle('hidden')"
+              class="text-xs px-2 py-1 rounded bg-orange-600 hover:bg-orange-500 text-white">📁 이동</button>
+      <button type="button" title="다른 폴더로 복사"
+              onclick="document.getElementById('lib-dup-panel-{{ test.id }}').classList.toggle('hidden')"
+              class="text-xs px-2 py-1 rounded bg-teal-600 hover:bg-teal-500 text-white">⎘ 복사</button>
+      <button type="button" title="채점 → 오답 시험지 자동 저장"
+              hx-get="/api/library/test/{{ test.id }}/scoring"
+              hx-target="#library-content"
+              hx-swap="innerHTML"
+              class="text-xs px-2 py-1 rounded bg-purple-700 hover:bg-purple-600 text-white">✏ 오답 만들기</button>
+      <button type="button" title="삭제"
+              onclick="window.libDeleteTest({{ test.id }}, '{{ (test.title or '')|e }}')"
+              class="text-xs px-2 py-1 rounded bg-rose-600 hover:bg-rose-500 text-white">× 삭제</button>
+    </div>
+  </div>
+
+  {# ── 정보수정 패널 (로컬 main_gui.py:6853 _lib_edit_info — 360x200 다이얼로그 동등) ─────── #}
+  <div id="lib-info-panel-{{ test.id }}" class="hidden bg-slate-900 border border-slate-600 rounded p-3 space-y-2">
+    <form hx-post="/api/library/test/{{ test.id }}/rename"
+          hx-target="#lib-preview"
+          hx-swap="innerHTML"
+          class="space-y-2"
+          onkeydown="if(event.key==='Escape'){this.closest('[id^=lib-info-panel-]').classList.add('hidden');}">
+      <div>
+        <label class="block text-[11px] text-slate-400 mb-0.5">시험지 이름</label>
+        <input type="text" name="title" value="{{ test.title or '' }}" required
+               class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm focus:border-blue-500 outline-none">
+      </div>
+      <div>
+        <label class="block text-[11px] text-slate-400 mb-0.5">단원 (요약)</label>
+        <input type="text" name="unit_summary" value="{{ test.unit_summary or '' }}"
+               class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm focus:border-blue-500 outline-none">
+      </div>
+      <div class="flex justify-end gap-1">
+        <button type="button"
+                onclick="document.getElementById('lib-info-panel-{{ test.id }}').classList.add('hidden')"
+                class="text-xs px-3 py-1 rounded bg-slate-600 hover:bg-slate-500 text-white">취소</button>
+        <button type="submit"
+                class="text-xs px-3 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white">저장</button>
+      </div>
+    </form>
+  </div>
+
+  {# ── 복사 패널 ─────────────────────────────────── #}
+  <div id="lib-dup-panel-{{ test.id }}" class="hidden bg-slate-900 border border-slate-700 rounded p-2">
+    <form hx-post="/api/library/test/{{ test.id }}/duplicate"
+          hx-target="#lib-preview"
+          hx-swap="innerHTML"
+          class="flex gap-2 items-center">
+      <select name="folder_id"
+              class="flex-1 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm">
+        <option value="root">📂 루트 (최상위)</option>
+        {% for f in folders or [] %}
+        <option value="{{ f.id }}" {% if f.id == test.directory_id %}selected{% endif %}>
+          📁 {{ f.name }}
+        </option>
+        {% endfor %}
+      </select>
+      <input type="text" name="title_suffix" value=" (복사본)"
+             class="w-32 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm">
+      <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 rounded px-3 py-1 text-sm">복사</button>
+    </form>
+  </div>
+
+  {# ── 이동 패널 ─────────────────────────────────── #}
+  <div id="lib-move-panel-{{ test.id }}" class="hidden bg-slate-900 border border-slate-700 rounded p-2">
+    <form hx-post="/api/library/test/{{ test.id }}/move"
+          hx-target="#lib-preview"
+          hx-swap="innerHTML"
+          class="flex gap-2 items-center">
+      <select name="folder_id"
+              class="flex-1 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm">
+        <option value="root">📂 전체 (루트)</option>
+        {% for f in folders or [] %}
+        <option value="{{ f.id }}" {% if f.id == test.directory_id %}selected{% endif %}>
+          📁 {{ f.name }}
+        </option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="bg-blue-600 hover:bg-blue-500 rounded px-3 py-1 text-sm">이동</button>
+    </form>
+  </div>
+
+  {# ── 시험지 출제 폼 ─────────────────────────────────── #}
+  {% set test_has_naesin = test.problems|selectattr('source', 'in', ['NAESIN_A', 'NAESIN_N'])|list|length > 0 %}
+  <form hx-post="/api/exam/library"
+        hx-target="#exam-progress-preview"
+        hx-swap="innerHTML"
+        class="flex flex-wrap gap-2 items-center">
+    <input type="hidden" name="test_id" value="{{ test.id }}">
+    <input type="text" name="exam_title" value="{{ test.title or '' }}"
+           class="flex-1 min-w-[180px] bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm focus:border-blue-500 outline-none">
+    {% if test_has_naesin %}
+    <label class="text-xs text-slate-300 flex items-center gap-1">
+      <input type="checkbox" name="exclude_tags" value="1">
+      태그 미포함
+    </label>
+    {% endif %}
+    <button type="submit"
+            class="bg-emerald-600 hover:bg-emerald-500 rounded px-4 py-1 text-sm font-medium transition">
+      ▶ 시험지 출제
+    </button>
+  </form>
+  <div id="exam-progress-preview"></div>
+
+  {# ── 문항 보기 표 — 7컬럼 (로컬 main_gui.py:6335 COLS 동등) ─────── #}
+  {# 헤더 색상: 편집컬럼 주황(#e65100), 읽기컬럼 파랑(#1565c0) — 로컬 main_gui.py:6347 #}
+  <div class="overflow-x-auto max-h-[520px] overflow-y-auto border border-slate-700 rounded bg-white">
+    <table class="min-w-full text-xs text-slate-800">
+      <thead class="bg-blue-50 sticky top-0 z-10">
+        <tr>
+          <th class="px-2 py-2 text-center font-semibold w-10"   style="color:#1565c0">번호</th>
+          <th class="px-2 py-2 text-left   font-semibold"        style="color:#1565c0">출처</th>
+          <th class="px-2 py-2 text-left   font-semibold"        style="color:#e65100">단원 ✎더블클릭</th>
+          <th class="px-2 py-2 text-center font-semibold w-24"   style="color:#e65100">난이도 ✎</th>
+          <th class="px-2 py-2 text-center font-semibold w-16"   style="color:#1565c0">유형</th>
+          <th class="px-2 py-2 text-center font-semibold w-40"   style="color:#1565c0">선호도</th>
+          <th class="px-2 py-2 text-center font-semibold w-16"   style="color:#1565c0">삭제</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in test.problems %}
+          {% set pid = p.id %}
+          {% set num = p.endnote_index or '?' %}
+          {% set fname = (p.file_name or '')|replace('.hwp','')|replace('.HWP','') %}
+          {% set source_txt = fname ~ '  ' ~ num ~ '번' %}
+          {% set unit_txt = p.middle_unit or p.large_unit or '' %}
+          {% set diff_code = p.difficulty or '' %}
+          {% set diff_txt = (diff_code ~ ': ' ~ level_map[diff_code]) if diff_code in level_map else diff_code %}
+        <tr class="{{ 'bg-white' if loop.index is even else 'bg-slate-50' }} border-t border-slate-200 hover:bg-yellow-50/40">
+          <td class="px-2 py-1 text-center">{{ loop.index }}</td>
+          <td class="px-2 py-1 text-slate-700">{{ source_txt }}</td>
+
+          {# 단원 — 더블클릭 인라인 편집 (호버 시 노란 배경) #}
+          <td class="px-1 py-1">
+            <div class="lib-inline-edit cursor-pointer px-1 rounded hover:bg-yellow-100"
+                 data-pid="{{ pid }}" data-field="unit_code" data-current="{{ unit_txt }}"
+                 ondblclick="libInlineEdit(this)" title="더블클릭하여 단원 변경">
+              {{ unit_txt }}
+            </div>
+          </td>
+
+          {# 난이도 — 더블클릭 인라인 편집 #}
+          <td class="px-1 py-1 text-center">
+            <div class="lib-inline-edit cursor-pointer px-1 rounded hover:bg-yellow-100"
+                 data-pid="{{ pid }}" data-field="difficulty" data-current="{{ diff_code }}"
+                 ondblclick="libInlineEdit(this)" title="더블클릭하여 난이도 변경">
+              {{ diff_txt }}
+            </div>
+          </td>
+
+          {# 유형 #}
+          <td class="px-2 py-1 text-center text-slate-700">{{ p.problem_type or '' }}</td>
+
+          {# 선호도 — 3색 토글 (Good/Soso/Bad) #}
+          {# 2026-05-23: pid 가 한글/[]를 포함하면 CSS selector 가 깨짐 → loop.index 로 안전 ID 부여 #}
+          <td class="px-2 py-1">
+            {% with current=pref_map.get(pid|string), safe_id='pref-cell-' ~ loop.index %}
+              {% include 'partials/library_pref_buttons.html' %}
+            {% endwith %}
+          </td>
+
+          {# 시험지에서만 제거 (DB의 문제 자체는 유지) #}
+          <td class="px-2 py-1 text-center">
+            <button type="button"
+                    hx-delete="/api/library/test/{{ test.id }}/problem/{{ pid }}"
+                    hx-target="#lib-preview"
+                    hx-swap="innerHTML"
+                    hx-confirm="{{ loop.index }}번 문제를 이 시험지에서 제거할까요?&#10;(DB의 문제 자체는 삭제되지 않습니다)"
+                    class="bg-rose-700 hover:bg-rose-600 text-white text-[11px] font-bold px-2 py-0.5 rounded">
+              삭제
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {# ── 하단 정보 바 — 로컬 main_gui.py:6620 동등 ─────── #}
+  <div class="flex items-center justify-between text-xs text-slate-400 px-1">
+    <span>총 {{ test.problems|length }}문항</span>
+    <span>사용자: {{ user_display }}{% if is_admin %} (관리자){% endif %}</span>
+  </div>
+</div>
+
+{# ── 단원 옵션 데이터 (인라인 편집 select 빌드용) ─────── #}
+<script id="lib-unit-options" type="application/json">
+{
+  "units": [
+    {% for u in unit_options or [] %}
+      {"code": "{{ u.code|e }}", "name": "{{ u.name|e }}"}{{ "," if not loop.last }}
+    {% endfor %}
+  ],
+  "difficulty": [
+    {"code": "A", "name": "최상"},
+    {"code": "B", "name": "상"},
+    {"code": "C", "name": "중"},
+    {"code": "D", "name": "하"}
+  ]
+}
+</script>
+
+<script>
+(function () {
+  if (window.__libTestActionsInstalled) return;
+  window.__libTestActionsInstalled = true;
+
+  // 시험지 삭제
+  window.libDeleteTest = async function (id, title) {
+    if (!confirm(`시험지 "${title}" 을(를) 삭제하시겠습니까?\n(복구 불가)`)) return;
+    const r = await fetch(`/api/library/test/${id}`, { method: "DELETE", credentials: "same-origin" });
+    if (!r.ok) { alert("삭제 실패"); return; }
+    document.getElementById("lib-preview").innerHTML = await r.text();
+    const lt = document.getElementById("lib-tests");
+    if (lt) htmx.trigger(lt, "load");
+  };
+
+  // 단원/난이도 인라인 편집 — 로컬 main_gui.py:6402 _make_inline_editor 동등
+  // 더블클릭 → select 오버레이 → 변경 시 PATCH → 응답 텍스트로 라벨 교체
+  window.libInlineEdit = function (el) {
+    if (el.querySelector('select')) return; // 이미 편집 중
+    const pid = el.dataset.pid;
+    const field = el.dataset.field;
+    const cur = (el.dataset.current || "").trim();
+    const optsNode = document.getElementById('lib-unit-options');
+    if (!optsNode) return;
+    let data;
+    try { data = JSON.parse(optsNode.textContent); } catch (e) { return; }
+    const options = (field === 'difficulty') ? data.difficulty : data.units;
+
+    const orig = el.innerHTML;
+    const sel = document.createElement('select');
+    sel.className = 'border border-orange-400 bg-yellow-50 rounded px-1 py-0.5 text-xs w-full';
+    // 빈 옵션 (단원 해제용)
+    if (field === 'unit_code') {
+      const o = document.createElement('option'); o.value = ''; o.textContent = '(없음)'; sel.appendChild(o);
+    }
+    options.forEach(opt => {
+      const o = document.createElement('option');
+      o.value = opt.code;
+      o.textContent = (field === 'difficulty')
+        ? `${opt.code}: ${opt.name}`
+        : `${opt.code}: ${opt.name}`;
+      o.dataset.name = opt.name;
+      // 현재 값 매칭 (코드 또는 이름)
+      if (opt.code === cur || opt.name === cur || cur.startsWith(opt.code + ':')) {
+        o.selected = true;
+      }
+      sel.appendChild(o);
+    });
+
+    el.innerHTML = '';
+    el.appendChild(sel);
+    sel.focus();
+    // 자동 드롭다운 펼치기 (브라우저별 차이 — best effort)
+    try { sel.size = Math.min(options.length + 1, 8); } catch(e){}
+    sel.addEventListener('blur', () => { sel.size = 1; setTimeout(() => { if (el.contains(sel)) { el.innerHTML = orig; } }, 100); });
+
+    const commit = async () => {
+      const code = sel.value;
+      const optEl = sel.options[sel.selectedIndex];
+      const name = (optEl && optEl.dataset.name) || '';
+      const fd = new FormData();
+      fd.append('field', field);
+      fd.append('code', code);
+      fd.append('name', name);
+      try {
+        const r = await fetch(`/api/library/problem/${pid}/meta`, {
+          method: 'PATCH', body: fd, credentials: 'same-origin',
+        });
+        if (!r.ok) { alert('저장 실패'); el.innerHTML = orig; return; }
+        const txt = await r.text();
+        el.innerHTML = txt;
+        // data-current 갱신 (재편집 시 매칭용)
+        el.dataset.current = (field === 'difficulty') ? code : (name || code);
+      } catch (e) {
+        alert('저장 실패: ' + e);
+        el.innerHTML = orig;
+      }
+    };
+
+    sel.addEventListener('change', commit);
+    sel.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Escape') { el.innerHTML = orig; }
+      else if (ev.key === 'Enter') { commit(); }
+    });
+  };
+})();
+</script>

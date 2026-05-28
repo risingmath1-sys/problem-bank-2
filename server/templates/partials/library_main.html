@@ -1,0 +1,27 @@
+{# 시험지 관리 메인 화면 (좌:폴더 / 중:목록 / 우:상세 — 3분할).
+   '문항 보기' 진입 시 이 partial 이 통째로 swap 되어 사라지고,
+   library_test_full.html (전체 화면) 으로 교체됨. 로컬 main_gui.py:6315 동등. #}
+<div class="grid grid-cols-1 lg:grid-cols-5 gap-4" id="library-grid">
+  <!-- 좌: 폴더 트리 -->
+  <aside class="lg:col-span-1 bg-slate-800 border border-slate-700 rounded-xl p-3"
+         hx-get="/partial/library/folders"
+         hx-trigger="load"
+         hx-swap="innerHTML">
+    <div class="text-slate-500 text-sm">폴더 로딩 중...</div>
+  </aside>
+
+  <!-- 중: 시험지 목록 -->
+  <section class="lg:col-span-2 bg-slate-800 border border-slate-700 rounded-xl p-3"
+           id="lib-tests"
+           hx-get="/partial/library/tests"
+           hx-trigger="load"
+           hx-swap="innerHTML">
+    <div class="text-slate-500 text-sm">시험지 로딩 중...</div>
+  </section>
+
+  <!-- 우: 시험지 상세 (요약 + 액션 + 빠른 미리보기) -->
+  <section class="lg:col-span-2 bg-slate-800 border border-slate-700 rounded-xl p-3"
+           id="lib-preview">
+    <div class="text-slate-500 text-sm">왼쪽에서 시험지를 선택하세요.</div>
+  </section>
+</div>

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}랜덤 출제 — 상승 Solution{% endblock %}
+{% block content %}
+{# 새 랜덤출제 사이클 시작 → step3 자동정렬 마커 리셋 (다음 step3 진입 시 자동 적용 재트리거) #}
+<script>try { sessionStorage.removeItem("step3_autosort_batch"); } catch (e) {}</script>
+<div id="random-root" class="space-y-4">
+  <header class="flex items-center justify-between">
+    <h1 class="text-2xl font-bold">🎲 랜덤출제 (단원선택)</h1>
+    <div class="flex gap-2">
+      <button type="button"
+              hx-post="/partial/random/step2"
+              hx-include="#step1-form"
+              hx-target="#random-root"
+              hx-swap="outerHTML"
+              class="bg-blue-600 hover:bg-blue-500 rounded px-5 py-1.5 text-sm font-semibold">
+        다음
+      </button>
+      <a href="/" class="bg-slate-700 hover:bg-slate-600 rounded px-4 py-1.5 text-sm">닫기</a>
+    </div>
+  </header>
+
+  <p class="text-sm text-slate-400">원하는 단원을 체크하세요. 대단원을 체크하면 그 아래 중단원은 자동으로 해제됩니다 (그 반대도 동일).</p>
+
+  {% if append_existing_count and append_existing_count > 0 %}
+  <div class="bg-blue-900/30 border border-blue-700 text-blue-200 rounded-xl p-3 text-sm flex items-center justify-between">
+    <span>📋 기존 출제 문항 <b>{{ append_existing_count }}개</b> 유지 중. 추가할 단원을 골라 [다음] 누르면 누적됩니다.</span>
+    <button type="button"
+            hx-post="/partial/random/step3_pop_last"
+            hx-target="#random-root"
+            hx-swap="outerHTML"
+            class="text-xs bg-slate-700 hover:bg-slate-600 rounded px-2 py-1">목록 보기</button>
+  </div>
+  {% endif %}
+
+  <form id="step1-form">
+    {% include "partials/random_step1_tree.html" %}
+  </form>
+</div>
+
+<script>
+  // 대단원 ↔ 중단원 상호배타 체크 (로컬 _toggle_check 와 동일)
+  document.addEventListener('change', function (e) {
+    const cb = e.target;
+    if (!cb.matches || !cb.matches('.unit-checkbox')) return;
+    if (!cb.checked) return;
+
+    const level = cb.dataset.level;
+    if (level === 'large') {
+      // 대단원 체크 → 같은 <details> 안의 모든 medium 해제
+      const detail = cb.closest('details');
+      if (detail) {
+        detail.querySelectorAll('.unit-checkbox[data-level="medium"]').forEach(m => { m.checked = false; });
+      }
+    } else if (level === 'medium') {
+      // 중단원 체크 → 부모 <details> 의 large 해제
+      const detail = cb.closest('details');
+      if (detail) {
+        const parentLarge = detail.querySelector(':scope > summary .unit-checkbox[data-level="large"]');
+        if (parentLarge) parentLarge.checked = false;
+      }
+    }
+  });
+</script>
+{% endblock %}
