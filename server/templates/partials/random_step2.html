@@ -235,9 +235,16 @@
   document.body.addEventListener('htmx:afterSwap', function () { window.updateAllocTotal(); });
 
   // ── R-7 detail filter — school/brand tag 관리 ──
+  // 폼 element 자체엔 hx-trigger 가 없고 input 들만 있으므로,
+  // htmx.trigger(form, 'change') 는 조용히 무시된다. 직접 ajax 로 step2_table 을 다시 가져온다.
   function _triggerFormChange() {
     var form = document.getElementById('step2-form');
-    if (form) htmx.trigger(form, 'change');
+    if (!form) return;
+    htmx.ajax('POST', '/partial/random/step2_table', {
+      source: form,
+      target: '#step2-table-wrap',
+      swap: 'outerHTML'
+    });
   }
 
   window.addSchoolTag = function (school) {

@@ -189,9 +189,15 @@ async def random_exam_multi(
             else:
                 f["source"] = {"in": sources}
         _apply_year_filter(f, fs)
-        # 학교 (R-7)
-        if fs.get("school_option_on") and fs.get("active_schools"):
-            f["school"] = {"in": fs["active_schools"]}
+        # 학교 (R-7) — schools_for_query: 풀네임 확장 리스트. None=미적용, []=강제 0.
+        sq = fs.get("schools_for_query")
+        if sq is not None:
+            if not sq:
+                f["school"] = "__NONE__"
+            elif len(sq) == 1:
+                f["school"] = sq[0]
+            else:
+                f["school"] = {"in": sq}
         # 문항번호 (R-7)
         if fs.get("pnum_option_on") and fs.get("active_problem_numbers"):
             f["problem_number"] = {"in": fs["active_problem_numbers"]}

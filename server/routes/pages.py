@@ -435,9 +435,12 @@ def _row_query_count(engine, unit_codes_or_code, lvl_code, type_code, filter_sta
             return 0
         f["source"] = {"in": sources} if len(sources) > 1 else sources[0]
     _apply_year_filter(f, filter_state)
-    # 학교 (R-7)
-    if filter_state.get("school_option_on") and filter_state.get("active_schools"):
-        f["school"] = {"in": filter_state["active_schools"]}
+    # 학교 (R-7) — schools_for_query 는 _parse_filter_form 에서 풀네임으로 확장된 리스트.
+    sq = filter_state.get("schools_for_query")
+    if sq is not None:
+        if not sq:
+            return 0
+        f["school"] = {"in": sq} if len(sq) > 1 else sq[0]
     # 문항번호 (R-7)
     if filter_state.get("pnum_option_on") and filter_state.get("active_problem_numbers"):
         f["problem_number"] = {"in": filter_state["active_problem_numbers"]}
@@ -634,6 +637,25 @@ def _parse_filter_form(form):
     detail_open = (form.get("detail_open") or "") == "1"
     school_on = initialized and (form.get("school_option_on") or "") == "1"
     schools = form.getlist("schools") if school_on else []
+    # DB 의 school 컬럼은 풀네임("휘문고", "휘문중", "중동고", ...) 으로 저장됨.
+    # 사용자가 태그로 짧은 키워드("휘문") 만 추가했으면 IN(...) 정확 매칭으로 0 건이 됨 →
+    # search_schools 로 풀네임 후보를 확장해서 별도 키 schools_for_query 에 둔다.
+    # active_schools (UI 태그 표시용) 는 사용자가 입력한 그대로 유지.
+    schools_for_query = None  # None=필터 미적용, []=강제 0, [..]=in
+    if school_on:
+        if not schools:
+            schools_for_query = []  # 옵션 켜졌는데 태그 0 개 → 강제 0
+        else:
+            from server.services.engine import get_engine as _get_eng
+            _eng = _get_eng()
+            expanded: list[str] = []
+            for kw in schools:
+                try:
+                    ms = _eng.search_schools(kw) or []
+                except Exception:
+                    ms = []
+                expanded.extend(ms if ms else [kw])
+            schools_for_query = list(dict.fromkeys(expanded))
     brand_on = initialized and (form.get("brand_option_on") or "") == "1"
     brands = form.getlist("brands") if brand_on else []
     pnum_on = initialized and (form.get("pnum_option_on") or "") == "1"
@@ -662,6 +684,7 @@ def _parse_filter_form(form):
         "detail_open": detail_open,
         "school_option_on": school_on,
         "active_schools": schools,
+        "schools_for_query": schools_for_query,
         "brand_option_on": brand_on,
         "active_brands": brands,
         "pnum_option_on": pnum_on,
