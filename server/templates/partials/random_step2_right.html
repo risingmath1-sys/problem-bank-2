@@ -26,7 +26,12 @@
         소스 필터
       </label>
       <button type="button" class="text-xs bg-slate-700 hover:bg-slate-600 rounded px-2 py-0.5"
-              onclick="document.querySelectorAll('input[name=sources]').forEach(c=>c.checked=false); htmx.trigger('#step2-form','change')">
+              onclick="
+                const m = document.querySelector('input[name=source_filter_on]');
+                if (m) m.checked = true;
+                document.querySelectorAll('input[name=sources]').forEach(c=>c.checked=false);
+                if (m) htmx.trigger(m, 'change');
+              ">
         전체해제
       </button>
     </div>
