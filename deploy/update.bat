@@ -1,50 +1,49 @@
 @echo off
-chcp 65001 > nul
 setlocal
 
 REM ============================================================
-REM  git pull + 서비스 재시작 (배포 업데이트)
-REM  사용자 PC에서 git push 후, 미니PC에서 이 파일 실행
+REM  git pull + restart service (deploy update)
+REM  Run on mini PC after a git push from the dev PC
 REM ============================================================
 
 set CLONE_DIR=C:\sangsung\problem-bank-2
 set SERVICE_NAME=ProblemBank2
+set PYTHON_EXE=C:\Users\Q\AppData\Local\Programs\Python\Python311\python.exe
 
 cd /d "%CLONE_DIR%"
 if errorlevel 1 (
-    echo [ERROR] 폴더 이동 실패: %CLONE_DIR%
+    echo [ERROR] Cannot change directory: %CLONE_DIR%
     pause
     exit /b 1
 )
 
-echo [INFO] 현재 커밋:
+echo [INFO] Current commit:
 git log -1 --oneline
 
 echo.
-echo [INFO] git pull 실행
+echo [INFO] Running git pull
 git pull
 if errorlevel 1 (
-    echo [ERROR] git pull 실패
+    echo [ERROR] git pull failed
     pause
     exit /b 1
 )
 
 echo.
-echo [INFO] 패키지 업데이트 (변경 시)
-set PYTHON_EXE=C:\Users\Q\AppData\Local\Programs\Python\Python311\python.exe
+echo [INFO] Updating packages (if changed)
 "%PYTHON_EXE%" -m pip install -r requirements.txt --quiet
 
 echo.
-echo [INFO] 서비스 재시작: %SERVICE_NAME%
+echo [INFO] Restarting service: %SERVICE_NAME%
 nssm restart %SERVICE_NAME%
 timeout /t 3 /nobreak >nul
 
 echo.
-echo [INFO] 서비스 상태:
+echo [INFO] Service status:
 nssm status %SERVICE_NAME%
 
 echo.
-echo [OK] 업데이트 완료
+echo [OK] Update complete
 echo  URL: http://192.168.0.139:8000
 echo.
 endlocal
