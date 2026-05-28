@@ -14,6 +14,9 @@ set NSSM=C:\sangsung\problem-bank-2\deploy\nssm.exe
 set LOG_FILE=%CLONE_DIR%\logs\autopull.log
 set MAX_LOG_BYTES=1048576
 
+REM -c safe.directory=... bypasses "dubious ownership" when running as SYSTEM.
+set GIT_OPTS=-c safe.directory=C:/sangsung/problem-bank-2
+
 cd /d "%CLONE_DIR%" || exit /b 1
 
 if not exist "%CLONE_DIR%\logs" mkdir "%CLONE_DIR%\logs"
@@ -31,14 +34,14 @@ REM Timestamp (locale-dependent; good enough for log lines)
 set TS=%date% %time:~0,8%
 
 REM Fetch upstream silently
-git fetch --quiet 2>>"%LOG_FILE%"
+git %GIT_OPTS% fetch --quiet 2>>"%LOG_FILE%"
 if errorlevel 1 (
     echo [!TS!] [ERROR] git fetch failed >> "%LOG_FILE%"
     exit /b 1
 )
 
-for /f %%I in ('git rev-parse HEAD') do set LOCAL_SHA=%%I
-for /f %%I in ('git rev-parse @{u}') do set REMOTE_SHA=%%I
+for /f %%I in ('git %GIT_OPTS% rev-parse HEAD') do set LOCAL_SHA=%%I
+for /f %%I in ('git %GIT_OPTS% rev-parse @{u}') do set REMOTE_SHA=%%I
 
 if "!LOCAL_SHA!"=="!REMOTE_SHA!" (
     echo [!TS!] no change ^(HEAD=!LOCAL_SHA:~0,7!^) >> "%LOG_FILE%"
@@ -49,10 +52,10 @@ echo. >> "%LOG_FILE%"
 echo [!TS!] === changes detected: !LOCAL_SHA:~0,7! -^> !REMOTE_SHA:~0,7! === >> "%LOG_FILE%"
 
 REM Check whether requirements.txt is among changed files
-git diff --name-only !LOCAL_SHA! !REMOTE_SHA! | findstr /b /c:"requirements.txt" >nul
+git %GIT_OPTS% diff --name-only !LOCAL_SHA! !REMOTE_SHA! | findstr /b /c:"requirements.txt" >nul
 set REQ_CHANGED=!errorlevel!
 
-git pull --quiet >>"%LOG_FILE%" 2>&1
+git %GIT_OPTS% pull --quiet >>"%LOG_FILE%" 2>&1
 if errorlevel 1 (
     echo [!TS!] [ERROR] git pull failed >> "%LOG_FILE%"
     exit /b 1
