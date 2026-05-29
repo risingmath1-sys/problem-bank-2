@@ -44,8 +44,13 @@ REM NOTE: do NOT gate on rev-parse SHA comparison. Under the SYSTEM scheduled
 REM task, the old "rev-parse HEAD vs @{u}" returned empty -> ""=="" -> the script
 REM always logged "no change" and NEVER pulled (mini PC stuck on old code).
 REM Instead we run the pull and read its own output to decide.
+REM Capture via file redirect + set/p (NOT for/f). Under the SYSTEM scheduled
+REM task, for/f command-capture of git output returns EMPTY (logged HEAD=~0,7),
+REM while file redirect works fine (proven: git pull > file shows "up to date").
+set SHA_TMP=%CLONE_DIR%\logs\_sha.txt
 set BEFORE_SHA=
-for /f "delims=" %%I in ('git %GIT_OPTS% rev-parse HEAD 2^>nul') do set BEFORE_SHA=%%I
+git %GIT_OPTS% rev-parse HEAD > "%SHA_TMP%" 2>nul
+if exist "%SHA_TMP%" set /p BEFORE_SHA=<"%SHA_TMP%"
 
 set PULL_OUT=%CLONE_DIR%\logs\_pull_out.txt
 git %GIT_OPTS% pull --ff-only > "%PULL_OUT%" 2>&1
@@ -67,7 +72,9 @@ if not errorlevel 1 (
 del "%PULL_OUT%" >nul 2>&1
 
 set AFTER_SHA=
-for /f "delims=" %%I in ('git %GIT_OPTS% rev-parse HEAD 2^>nul') do set AFTER_SHA=%%I
+git %GIT_OPTS% rev-parse HEAD > "%SHA_TMP%" 2>nul
+if exist "%SHA_TMP%" set /p AFTER_SHA=<"%SHA_TMP%"
+del "%SHA_TMP%" >nul 2>&1
 echo. >> "%LOG_FILE%"
 echo [!TS!] === updated: !BEFORE_SHA:~0,7! -^> !AFTER_SHA:~0,7! === >> "%LOG_FILE%"
 
