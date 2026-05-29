@@ -103,6 +103,22 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+@app.middleware("http")
+async def _no_store_dynamic(request, call_next):
+    """동적 HTML(페이지·HTMX 파셜)은 브라우저 캐시 금지.
+    이유: 제외설정 다이얼로그 등 GET 파셜이 브라우저 디스크 캐시에 남으면,
+    서버를 새 코드로 재시작해도 구버전 HTML/JS 가 그대로 떠서 '고쳐도 그대로'
+    증상이 난다. /static 은 제외(자체 캐시 유지)."""
+    response = await call_next(request)
+    path = request.url.path
+    if not path.startswith("/static"):
+        ctype = response.headers.get("content-type", "")
+        if "text/html" in ctype or path.startswith("/partial") or path.startswith("/api"):
+            response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+            response.headers["Pragma"] = "no-cache"
+    return response
+
+
 app.mount("/static", StaticFiles(directory=str(config.STATIC_DIR)), name="static")
 
 app.include_router(pages.router)

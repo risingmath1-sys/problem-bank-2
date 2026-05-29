@@ -32,6 +32,7 @@
                    hx-target="next .folder-body"
                    hx-swap="innerHTML">
             <input type="checkbox" class="folder-master accent-rose-500"
+                   name="excl_folder" value="root"
                    title="이 폴더 시험지 전체 선택/해제"
                    onclick="event.stopPropagation(); applyFolderState(this.closest('details'), this.checked);">
             📂 루트 (최상위)
@@ -48,6 +49,7 @@
                    hx-target="next .folder-body"
                    hx-swap="innerHTML">
             <input type="checkbox" class="folder-master accent-rose-500"
+                   name="excl_folder" value="{{ node.id }}"
                    title="이 폴더(하위 포함) 시험지 전체 선택/해제"
                    onclick="event.stopPropagation(); applyFolderState(this.closest('details'), this.checked);">
             {% if node.is_protected %}🔒{% else %}📁{% endif %} {{ node.name }}
@@ -84,6 +86,17 @@
     if (!folderEl) return;
     const body = folderEl.querySelector(':scope > .folder-body');
     if (!body) return;
+
+    // ★ 본인 body 가 아직 lazy-load 안 됐으면(빈 상태) 먼저 fetch 한다.
+    //   (폴더를 펼치지 않고 마스터 체크박스만 누른 경우 — body 가 비어 있어
+    //    체크할 시험지 체크박스가 DOM 에 없어서 제외가 전혀 안 되던 버그 수정.)
+    //   체크 ON 일 때만 fetch → 로드 완료 시 htmx:afterSwap 핸들러가 재귀 적용.
+    if (state && body.children.length === 0 &&
+        folderEl.dataset && folderEl.dataset.folderId && window.htmx) {
+      window.htmx.ajax('GET', '/partial/random/exclusion_folder/' + folderEl.dataset.folderId,
+                       { target: body, swap: 'innerHTML' });
+      return;
+    }
 
     body.querySelectorAll('input.excl-tid-visible').forEach(function(cb) {
       cb.checked = state;

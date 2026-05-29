@@ -31,6 +31,7 @@
              hx-target="next .folder-body"
              hx-swap="innerHTML">
       <input type="checkbox" class="folder-master accent-rose-500"
+             name="excl_folder" value="{{ c.id }}"
              title="이 폴더(하위 포함) 시험지 전체 선택/해제"
              onclick="event.stopPropagation(); applyFolderState(this.closest('details'), this.checked);">
       {% if c.is_protected %}🔒{% else %}📁{% endif %} {{ c.name }}

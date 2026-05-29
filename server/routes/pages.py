@@ -476,7 +476,8 @@ def _row_query_count(engine, unit_codes_or_code, lvl_code, type_code, filter_sta
     return result
 
 
-def _build_step2_rows(selected, filter_state, current_user_id, initial_allocs=None):
+def _build_step2_rows(selected, filter_state, current_user_id, initial_allocs=None,
+                      oneshot_override=None):
     """선택 단원 리스트 → 좌측 테이블 행 리스트 + 합계.
     로컬 _refresh_step_2_list (main_gui.py:3196) 포팅.
 
@@ -506,10 +507,14 @@ def _build_step2_rows(selected, filter_state, current_user_id, initial_allocs=No
     rate_ids = _get_rate_filter_ids(filter_state)
 
     # 일회성 제외 (제외설정 다이얼로그) — 로컬 main_gui.py:3378 동등.
-    # draft 에서 가져와 _row_query_count 로 전달 → 가능 문제수에서 차감.
-    from server.services import exam_session
-    draft = exam_session.get_draft(current_user_id)
-    oneshot_excluded_ids = set(getattr(draft, "oneshot_excluded_problem_ids", set()) or set())
+    # 우선순위: 폼으로 실려온 oneshot_override (stateless) > in-memory draft (fallback).
+    # 폼 기반이면 서버 재시작/--reload 로 draft 가 비어도 제외가 유지된다.
+    if oneshot_override is not None:
+        oneshot_excluded_ids = set(oneshot_override)
+    else:
+        from server.services import exam_session
+        draft = exam_session.get_draft(current_user_id)
+        oneshot_excluded_ids = set(getattr(draft, "oneshot_excluded_problem_ids", set()) or set())
 
     rows = []
     total = 0
@@ -717,6 +722,7 @@ async def partial_random_step2(
         all_years = []
     from server.services import exam_session
     draft = exam_session.get_draft(user.uid)
+    excluded_test_ids = sorted(getattr(draft, "oneshot_excluded_test_ids", set()) or set())
     return templates.TemplateResponse(
         request, "partials/random_step2.html",
         {
@@ -731,6 +737,7 @@ async def partial_random_step2(
             "ALL_PREFS": ALL_PREFS,
             "ALL_YEARS": all_years,
             "existing_count": draft.total,
+            "excluded_test_ids": excluded_test_ids,
         },
     )
 
@@ -820,16 +827,76 @@ def _test_problem_ids(engine, tid, uid) -> list:
         return []
 
 
+def _expand_folder_test_ids(engine, fid, uid, _all_folders=None) -> set:
+    """폴더 id → 그 폴더의 시험지 id 집합.
+    fid='root' → 최상위(directory_id=None) 시험지만 (하위 폴더 미포함).
+    이름있는 폴더 → 그 폴더 + 모든 하위 폴더의 시험지 (재귀).
+    제외설정에서 폴더 마스터 체크 시, lazy-load 된 DOM 에 의존하지 않고
+    서버가 직접 폴더를 펼쳐 시험지를 모은다 (브라우저 상태 비의존)."""
+    if _all_folders is None:
+        try:
+            _all_folders = engine.get_folders(uid) or []
+        except Exception:
+            _all_folders = []
+    if fid == "root":
+        try:
+            tests = engine.get_tests(directory_id=None, user_id=uid) or []
+        except Exception:
+            tests = []
+        return set(t["id"] for t in tests if t.get("id") is not None)
+    try:
+        directory_id = int(fid)
+    except (TypeError, ValueError):
+        directory_id = fid
+    tids = set()
+    try:
+        tests = engine.get_tests(directory_id=directory_id, user_id=uid) or []
+        tids.update(t["id"] for t in tests if t.get("id") is not None)
+    except Exception:
+        pass
+    for f in _all_folders:
+        if f.get("parent_id") == directory_id and f.get("id") is not None:
+            tids |= _expand_folder_test_ids(engine, f["id"], uid, _all_folders)
+    return tids
+
+
+def _excluded_test_ids_from_form(engine, form, uid) -> set:
+    """폼의 excl_tid (개별 시험지) + excl_folder (폴더 마스터) → 제외 시험지 id 집합.
+    폴더는 서버에서 하위까지 펼쳐 시험지로 변환 → lazy DOM 미로드여도 정확."""
+    tids = set(int(x) for x in form.getlist("excl_tid") if str(x).isdigit())
+    folder_ids = [x for x in form.getlist("excl_folder") if x]
+    if folder_ids:
+        all_folders = None
+        for fid in folder_ids:
+            tids |= _expand_folder_test_ids(engine, fid, uid, all_folders)
+    return tids
+
+
+def _resolve_excl_tids(engine, form, uid):
+    """폼 → 제외할 problem id set.
+    제외설정이 폼에 실려 있으면 그것을 정본으로 사용 (in-memory draft 비의존).
+    폼에 제외 표시가 하나도 없으면 None → 호출부가 draft fallback 으로 처리."""
+    tids = _excluded_test_ids_from_form(engine, form, uid)
+    if not tids:
+        return None
+    pids = set()
+    for tid in tids:
+        pids.update(_test_problem_ids(engine, tid, uid))
+    return pids
+
+
 @router.post("/partial/random/exclusion_apply", response_class=HTMLResponse)
 async def partial_random_exclusion_apply(
     request: Request,
     user: SessionUser = Depends(require_user),
 ):
-    """제외설정 적용 — 체크된 시험지의 problem_ids 를 oneshot 제외 set 에 저장."""
+    """제외설정 적용 — 체크된 시험지(+폴더 마스터)의 problem_ids 를 oneshot 제외 set 에 저장.
+    폴더 마스터 체크는 서버에서 하위 시험지까지 펼쳐 처리 → lazy DOM 미로드여도 정확."""
     from server.services import exam_session
     form = await request.form()
-    selected_tids = [int(x) for x in form.getlist("excl_tid") if x.isdigit()]
     engine = get_engine()
+    # excl_tid (개별) + excl_folder (폴더 마스터, 서버에서 하위까지 펼침) 통합
+    selected_tids = sorted(_excluded_test_ids_from_form(engine, form, user.uid))
     pids = set()
     for tid in selected_tids:
         pids.update(_test_problem_ids(engine, tid, user.uid))
@@ -846,10 +913,20 @@ async def partial_random_exclusion_apply(
     #  2) 다이얼로그 자동 닫힘 → closeExclDialog 이벤트
     #  3) step2 테이블 자동 갱신 → step2Refresh 이벤트
     # comma-separated 형식 — JSON 객체보다 호환성 ↑
+    # OOB 스왑으로 step2-form 내 #excl-hidden-fields 를 갱신 → 매 테이블 갱신·출제 요청에
+    # excl_tid 가 폼으로 실려간다 (서버 in-memory draft 가 재시작으로 날아가도 제외 유지).
+    hidden_inputs = "".join(
+        f'<input type="hidden" name="excl_tid" value="{tid}">' for tid in selected_tids
+    )
+    oob = (
+        f'<div id="excl-hidden-fields" class="hidden" hx-swap-oob="innerHTML">'
+        f'{hidden_inputs}</div>'
+    )
     return HTMLResponse(
         content=(
             f'<div class="bg-emerald-900/40 border border-emerald-700 text-emerald-200 rounded-xl p-3 text-sm">'
             f'✓ {len(selected_tids)}개 시험지 / {len(pids)}문항이 이번 출제에서 제외됩니다.</div>'
+            f'{oob}'
         ),
         headers={"HX-Trigger": "step2Refresh, closeExclDialog"},
     )
@@ -889,7 +966,9 @@ async def partial_random_step2_table(
     form = await request.form()
     selected = _parse_units_form(form.getlist("units"))
     f = _parse_filter_form(form)
-    rows, total_avail = _build_step2_rows(selected, f, user.uid)
+    oneshot_override = _resolve_excl_tids(get_engine(), form, user.uid)
+    rows, total_avail = _build_step2_rows(selected, f, user.uid,
+                                          oneshot_override=oneshot_override)
     return templates.TemplateResponse(
         request, "partials/random_step2_table.html",
         {"rows": rows, "total_avail": total_avail},
@@ -1172,13 +1251,16 @@ def partial_random_step3_to_step2(
 
     f = _parse_filter_form(saved)
     initial_allocs = {k: v for k, v in draft.last_form_items if k.startswith("alloc_")}
-    rows, total_avail = _build_step2_rows(selected, f, user.uid, initial_allocs=initial_allocs)
-    units_payload = [f"{u['type']}:{u['code']}:{u['version']}" for u in selected]
     engine = get_engine()
+    oneshot_override = _resolve_excl_tids(engine, saved, user.uid)
+    rows, total_avail = _build_step2_rows(selected, f, user.uid, initial_allocs=initial_allocs,
+                                          oneshot_override=oneshot_override)
+    units_payload = [f"{u['type']}:{u['code']}:{u['version']}" for u in selected]
     try:
         all_years = engine.get_unique_years() or []
     except Exception:
         all_years = []
+    excluded_test_ids = [int(x) for x in saved.getlist("excl_tid") if str(x).isdigit()]
     return templates.TemplateResponse(
         request, "partials/random_step2.html",
         {
@@ -1193,6 +1275,7 @@ def partial_random_step3_to_step2(
             "ALL_PREFS": ALL_PREFS,
             "ALL_YEARS": all_years,
             "existing_count": draft.total,
+            "excluded_test_ids": excluded_test_ids,
         },
     )
 
@@ -1405,7 +1488,11 @@ def _apply_id_constraint(f: dict, engine, id_set):
     id_set 이 매우 클 때 보완 집합(NOT IN) 으로 변환.
     id_set 빈 set 이면 caller 가 '__NONE__' 등으로 처리.
     """
-    SQL_VAR_LIMIT = 900
+    # SQLite ≥3.32 의 변수 한도는 32766. 옛 999 한도 가정의 900 은 너무 보수적이어서
+    # DB 가 6만건+ 로 커지자 IN 집합도 그 여집합도 900 을 넘겨 "양쪽 다 큼 → 필터 미적용"
+    # 으로 빠지며 제외설정/선호도 필터가 통째로 무시되는 버그가 났다.
+    # 다른 조건(unit_code/source/year/problem_number IN 등) 파라미터 여유분을 남기고 30000 사용.
+    SQL_VAR_LIMIT = 30000
     if not id_set:
         return False  # caller 가 직접 처리
     if len(id_set) <= SQL_VAR_LIMIT:

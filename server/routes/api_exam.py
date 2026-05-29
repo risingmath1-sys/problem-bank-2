@@ -262,9 +262,15 @@ async def random_exam_multi(
 
     engine = get_engine()
 
-    # 일회성 제외 (제외설정 다이얼로그) — 로컬 _oneshot_excluded_problem_ids 동등
-    draft_for_excl = exam_session.get_draft(user.uid)
-    exclude_ids = list(getattr(draft_for_excl, "oneshot_excluded_problem_ids", set()) or [])
+    # 일회성 제외 (제외설정 다이얼로그) — 로컬 _oneshot_excluded_problem_ids 동등.
+    # 우선순위: 폼으로 실려온 excl_tid (stateless) > in-memory draft (fallback).
+    from server.routes.pages import _resolve_excl_tids
+    form_excl = _resolve_excl_tids(engine, form, user.uid)
+    if form_excl is not None:
+        exclude_ids = list(form_excl)
+    else:
+        draft_for_excl = exam_session.get_draft(user.uid)
+        exclude_ids = list(getattr(draft_for_excl, "oneshot_excluded_problem_ids", set()) or [])
 
     problems = engine.fetch_random_problems(
         criteria_list, exclude_ids=exclude_ids,
