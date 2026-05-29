@@ -39,34 +39,44 @@ if exist "%LOG_FILE%" (
 REM Timestamp (locale-dependent; good enough for log lines)
 set TS=%date% %time:~0,8%
 
-REM Fetch upstream silently
-git %GIT_OPTS% fetch --quiet 2>>"%LOG_FILE%"
-if errorlevel 1 (
-    echo [!TS!] [ERROR] git fetch failed >> "%LOG_FILE%"
+REM Capture HEAD before pull (for requirements diff + restart decision).
+REM NOTE: do NOT gate on rev-parse SHA comparison. Under the SYSTEM scheduled
+REM task, the old "rev-parse HEAD vs @{u}" returned empty -> ""=="" -> the script
+REM always logged "no change" and NEVER pulled (mini PC stuck on old code).
+REM Instead we run the pull and read its own output to decide.
+set BEFORE_SHA=
+for /f "delims=" %%I in ('git %GIT_OPTS% rev-parse HEAD 2^>nul') do set BEFORE_SHA=%%I
+
+set PULL_OUT=%CLONE_DIR%\logs\_pull_out.txt
+git %GIT_OPTS% pull --ff-only > "%PULL_OUT%" 2>&1
+set PULL_RC=!errorlevel!
+type "%PULL_OUT%" >> "%LOG_FILE%"
+if not "!PULL_RC!"=="0" (
+    echo [!TS!] [ERROR] git pull failed ^(rc=!PULL_RC!^) >> "%LOG_FILE%"
+    del "%PULL_OUT%" >nul 2>&1
     exit /b 1
 )
 
-for /f %%I in ('git %GIT_OPTS% rev-parse HEAD') do set LOCAL_SHA=%%I
-for /f %%I in ('git %GIT_OPTS% rev-parse @{u}') do set REMOTE_SHA=%%I
-
-if "!LOCAL_SHA!"=="!REMOTE_SHA!" (
-    echo [!TS!] no change ^(HEAD=!LOCAL_SHA:~0,7!^) >> "%LOG_FILE%"
+REM "Already up to date" (any case) => nothing changed, done.
+findstr /i /c:"up to date" "%PULL_OUT%" >nul
+if not errorlevel 1 (
+    echo [!TS!] no change ^(HEAD=!BEFORE_SHA:~0,7!^) >> "%LOG_FILE%"
+    del "%PULL_OUT%" >nul 2>&1
     exit /b 0
 )
+del "%PULL_OUT%" >nul 2>&1
 
+set AFTER_SHA=
+for /f "delims=" %%I in ('git %GIT_OPTS% rev-parse HEAD 2^>nul') do set AFTER_SHA=%%I
 echo. >> "%LOG_FILE%"
-echo [!TS!] === changes detected: !LOCAL_SHA:~0,7! -^> !REMOTE_SHA:~0,7! === >> "%LOG_FILE%"
+echo [!TS!] === updated: !BEFORE_SHA:~0,7! -^> !AFTER_SHA:~0,7! === >> "%LOG_FILE%"
 
-REM Check whether requirements.txt is among changed files
-git %GIT_OPTS% diff --name-only !LOCAL_SHA! !REMOTE_SHA! | findstr /b /c:"requirements.txt" >nul
-set REQ_CHANGED=!errorlevel!
-
-git %GIT_OPTS% pull --quiet >>"%LOG_FILE%" 2>&1
-if errorlevel 1 (
-    echo [!TS!] [ERROR] git pull failed >> "%LOG_FILE%"
-    exit /b 1
+REM Check whether requirements.txt changed (only if both SHAs known).
+set REQ_CHANGED=1
+if not "!BEFORE_SHA!"=="" if not "!AFTER_SHA!"=="" (
+    git %GIT_OPTS% diff --name-only !BEFORE_SHA! !AFTER_SHA! | findstr /b /c:"requirements.txt" >nul
+    set REQ_CHANGED=!errorlevel!
 )
-
 if !REQ_CHANGED! equ 0 (
     echo [!TS!] requirements.txt changed - running pip install >> "%LOG_FILE%"
     "%PYTHON_EXE%" -m pip install -r requirements.txt --quiet >>"%LOG_FILE%" 2>&1
