@@ -5,12 +5,18 @@ REM ============================================================
 REM  Auto-pull poller: git fetch -> if upstream ahead -> pull + restart
 REM  Safe to run as scheduled task (no pause, no stdout).
 REM  Manual run: run from cmd; see logs\autopull.log for output.
+REM
+REM  RESTART MODEL (important):
+REM   The real server runs via start_server.bat in the Q user's interactive
+REM   desktop (HWP COM needs a real WindowStation; a Windows Service breaks it).
+REM   So we do NOT restart any service. Instead we KILL the uvicorn process
+REM   listening on SERVER_PORT; start_server.bat's loop then auto-relaunches it
+REM   with the freshly pulled code (== same effect as a manual Ctrl+C).
 REM ============================================================
 
 set CLONE_DIR=C:\sangsung\problem-bank-2
-set SERVICE_NAME=ProblemBank2
+set SERVER_PORT=8000
 set PYTHON_EXE=C:\Users\Q\AppData\Local\Programs\Python\Python311\python.exe
-set NSSM=C:\sangsung\problem-bank-2\deploy\nssm.exe
 set LOG_FILE=%CLONE_DIR%\logs\autopull.log
 set MAX_LOG_BYTES=1048576
 
@@ -66,12 +72,21 @@ if !REQ_CHANGED! equ 0 (
     "%PYTHON_EXE%" -m pip install -r requirements.txt --quiet >>"%LOG_FILE%" 2>&1
 )
 
-echo [!TS!] restarting service %SERVICE_NAME% >> "%LOG_FILE%"
-"%NSSM%" restart %SERVICE_NAME% >>"%LOG_FILE%" 2>&1
+REM Restart the interactive console server: kill uvicorn on SERVER_PORT.
+REM start_server.bat's :restart loop relaunches it with the new code in ~5s.
+set KILLED=0
+for /f "tokens=5" %%P in ('netstat -ano ^| findstr /c:":%SERVER_PORT% " ^| findstr /c:"LISTENING"') do (
+    echo [!TS!] killing uvicorn pid %%P ^(port %SERVER_PORT%^) >> "%LOG_FILE%"
+    taskkill /f /pid %%P >>"%LOG_FILE%" 2>&1
+    set KILLED=1
+)
+if "!KILLED!"=="0" (
+    echo [!TS!] [WARN] no LISTENING process on port %SERVER_PORT% - is start_server.bat running? >> "%LOG_FILE%"
+)
 
-timeout /t 3 /nobreak >nul
-echo [!TS!] post-restart status: >> "%LOG_FILE%"
-"%NSSM%" status %SERVICE_NAME% >>"%LOG_FILE%" 2>&1
+timeout /t 6 /nobreak >nul
+echo [!TS!] post-restart check (expect a LISTENING line): >> "%LOG_FILE%"
+netstat -ano | findstr /c:":%SERVER_PORT% " | findstr /c:"LISTENING" >>"%LOG_FILE%" 2>&1
 
 endlocal
 exit /b 0
